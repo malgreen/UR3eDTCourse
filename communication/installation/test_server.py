@@ -9,9 +9,9 @@ if __name__ == '__main__':
     rabbbitmq_config = {
         "ip": "localhost",
         "port": 5672,
-        "username": "incubator",
-        "password": "incubator",
-        "exchange": "Incubator_AMQP",
+        "username": "ur3e",
+        "password": "ur3e",
+        "exchange": "ur3e_AMQP",
         "type": "topic",
         "vhost": "/"
     }
@@ -20,11 +20,11 @@ if __name__ == '__main__':
     # rabbbitmq_config = {
     #     "ip": "CONTACT_CLAUDIO",
     #     "port": 5671,
-    #     "username": "incubator",
+    #     "username": "ur3e",
     #     "password": "CONTACT_CLAUDIO",
     #     "exchange": "example_exchange",
     #     "type": "topic",
-    #     "vhost": "incubator",
+    #     "vhost": "ur3e",
     #     "ssl": {
     #         "protocol": "PROTOCOL_TLS",
     #         "ciphers" : "ECDHE+AESGCM:!ECDSA"
