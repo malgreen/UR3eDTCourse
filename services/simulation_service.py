@@ -43,10 +43,10 @@ class SimulationService:
             if body.get(protocol.CtrlMsgKeys.TYPE) == protocol.CtrlMsgFields.LOAD_PROGRAM:
                 target_joint_positions = body.get(protocol.CtrlMsgKeys.JOINT_POSITIONS)
                 self.head = self.model.fkine(target_joint_positions)
-                print(self.head)
                 self.rmq.send_message(protocol.ROUTING_KEY_SIM_STATE, {
                     protocol.RobotArmStateKeys.Q_ACTUAL: self.model.q.tolist(),
-                    # TODO: protocol.RobotArmStateKeys.TCP_POSE: self.head
+                    protocol.RobotArmStateKeys.TCP_POSE: [self.head.x, self.head.y, self.head.z] + self.head.rpy().tolist()
+                    
                 })
         except Exception as e:
             print(e)
