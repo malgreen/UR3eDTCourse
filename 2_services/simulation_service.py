@@ -6,9 +6,6 @@ import logging.config
 import time
 import numpy as np
 
-
-
-
 # Get the current working directory. Should be 1-Incubator-Service
 current_dir = os.getcwd()
 print("Current directory: " + current_dir)
@@ -59,6 +56,9 @@ class SimulationService:
 
             print(f"✓ Message type: {msg_type}")
             print(body)
+            joint_positions = body.get(protocol.CtrlMsgKeys.JOINT_POSITIONS)
+            print(f"✓ Joint positions: {joint_positions}")
+            # load the model with the joint positions
 
         except Exception as e:
             print(f"✗ Error: {e}")
