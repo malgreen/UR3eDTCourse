@@ -81,3 +81,14 @@ if __name__ == "__main__":
 
     service = SimulationService()
     service.start()
+
+"""
+This is the recieved signal format being sent by the user:
+✓ Listening for messages...
+✓ Message type: load_program
+{'type': 'load_program', 'joint_positions': [[0.0, -1.5707963267948966, 1.5707963267948966, -1.5707963267948966, -1.5707963267948966, 0.0]], 'max_velocity': 60, 'acceleration': 80}
+✓ Message type: play
+{'type': 'play'}
+
+For the model it needs to be loaded with only the joint positions.
+"""
