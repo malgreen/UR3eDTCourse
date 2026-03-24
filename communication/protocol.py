@@ -6,6 +6,9 @@ ENCODING = "ascii"
 ROUTING_KEY_STATE = "robotarm.pt.state"
 ROUTING_KEY_CTRL = "robotarm.ctrl"
 
+ROUTING_KEY_SIM_STATE = "robotarm.simulation.state"
+ROUTING_KEY_SIM_CTRL = "robotarm.simulation.ctrl"
+
 
 ### MESSAGES
 class CtrlMsgFields:
