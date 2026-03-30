@@ -6,11 +6,24 @@ ENCODING = "ascii"
 ROUTING_KEY_STATE = "robotarm.pt.state"
 ROUTING_KEY_CTRL = "robotarm.ctrl"
 
-ROUTING_KEY_SIM_STATE = "robotarm.simulation.state"
-ROUTING_KEY_SIM_CTRL = "robotarm.simulation.ctrl"
+ROUTING_KEY_SIM_STATE = "service.simulation.state"
+ROUTING_KEY_SIM_CTRL = "service.simulation.ctrl"
 
+ROUTING_KEY_SIMPLE_ERROR_SERVICE = "service.error.simple"
 
 ### MESSAGES
+
+class SimpleErrorMsgKeys:
+    STATUS = "status"
+    ACTUAL_POSITION = "actual_position"
+    SIMULATED_POISITION = "simulated_position"
+
+
+class SimCtrlMsgKeys:
+    TYPE = "type"
+    JOINT_POSITIONS = "joint_positions"
+
+
 class CtrlMsgFields:
     """Types of control messages that can be sent to the robot arm."""
 
