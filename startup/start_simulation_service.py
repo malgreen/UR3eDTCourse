@@ -1,16 +1,22 @@
-
-from os import wait
-from time import sleep
+from startup.utils.logging_config import get_logger
+from multiprocessing import Process
+import traceback
+import logging
 import services.simulation_service
 
+
 def start_simulation_service() -> None:
+    logger = get_logger("simulation_service")
     try:
-        # the start_consuming call in the service is blocking
-        service = services.simulation_service.SimulationService()
+        logger.info("Starting SimulationService...")
+        # the start_consuming call in the constructor is blocking
+        p = Process(target=services.simulation_service.SimulationService)
+        p.start()
+        p.join()
     except KeyboardInterrupt:
-        print("Shutting down SimulationService...")
-    except Exception as e:
-        print(e)
+        logger.info("Shutting down SimulationService...")
+    except Exception:
+        logger.error(traceback.format_exc())
+    finally:
+        logger.info("Simulation")
     
-if __name__ == "__main__":
-    start_simulation_service()

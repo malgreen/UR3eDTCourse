@@ -1,8 +1,12 @@
+import json
+import logging
 import traceback
-from communication import protocol
-from communication.rabbitmq import Rabbitmq, logging
-import roboticstoolbox as rtb
+from os import path
+
 import numpy as np
+import roboticstoolbox as rtb
+from communication import protocol
+from communication.rabbitmq import Rabbitmq
 from spatialmath import SE3
 
 
@@ -16,18 +20,36 @@ class SimulationService:
         protocol.CtrlMsgKeys.JOINT_POSITIONS: [0, np.pi/2, 0, 0, 0, 0]
     }
     ```
-    NOTE: it does not require a `START` message. It simulates when receiving `LOAD_PROGRAM`.\\
-    After a simulation pass, it publishes the state. The message structure for the state,
+    NOTE: it does not require a `START` message. It simulates when receiving `LOAD_PROGRAM`.
+
+    After a simulation pass, it publishes the state. The message structure for the state
     resembles the structure of the mockup state messages:
     ```py
     state: dict = {
         protocol.RobotArmStateKeys.Q_ACTUAL: [0, 0, 0, 0, 0, 0],
-        protocol.RobotArmStateKeys.TCP_POSE: [x, y, z, r, p, y]            
+        protocol.RobotArmStateKeys.TCP_POSE: [x, y, z, r, p, y]
     }
     ```
     """
 
     def __init__(self) -> None:
+        # === Logging === #
+        logging.basicConfig(
+            level=logging.INFO,
+            handlers=[
+                logging.FileHandler(
+                    path.join(
+                        path.dirname(path.dirname(__file__)),
+                        "logs",
+                        "simulation_service.log",
+                    )
+                ),
+                logging.StreamHandler(),
+            ],
+            format="%(asctime)s.%(msecs)03d %(levelname)s %(name)s : %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        self.log = logging.getLogger("simulation_service")
         # === RabbitMQ === #
         self.rmq: Rabbitmq = Rabbitmq(
             ip="localhost",
@@ -39,6 +61,7 @@ class SimulationService:
             type="topic",
         )
         self.rmq.connect_to_server()
+        self.log.info("Connected to RabbitMQ")
         # === Model === #
         self.links: list[rtb.RevoluteDH] = [
             rtb.RevoluteDH(d=0.15185, a=0, alpha=np.pi / 2),
@@ -54,11 +77,14 @@ class SimulationService:
         self.rmq.subscribe(
             protocol.ROUTING_KEY_SIM_CTRL, self.on_sim_ctrl_message_received
         )
-        logging.info("SimulationService listening")
+        self.log.info("Start consuming")
         self.rmq.start_consuming()
 
     def on_sim_ctrl_message_received(self, channel, method, properties, body) -> None:
         try:
+            self.log.info(
+                f"Received SIM CTRL message with body: {json.dumps(body, indent=4)}"
+            )
             if (
                 body.get(protocol.SimCtrlMsgKeys.TYPE)
                 == protocol.CtrlMsgFields.LOAD_PROGRAM
@@ -67,6 +93,7 @@ class SimulationService:
                     protocol.SimCtrlMsgKeys.JOINT_POSITIONS
                 )
                 self.head = self.model.fkine(target_joint_positions)
+                self.log.info("Sending SIM STATE message")
                 self.rmq.send_message(
                     protocol.ROUTING_KEY_SIM_STATE,
                     {
@@ -80,7 +107,7 @@ class SimulationService:
                     },
                 )
         except Exception:
-            traceback.print_exc()
+            self.log.error(traceback.format_exc())
 
 
 if __name__ == "__main__":

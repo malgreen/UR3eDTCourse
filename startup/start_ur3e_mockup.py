@@ -5,16 +5,7 @@ This module starts the executable in '../ur3e_mockup/' folder named 'ur3e_mockup
 import subprocess
 import os
 import platform
-import logging
-from startup.utils.logging_config import config_logging
-
-# Configure logging
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, "ur3e_mockup.log")
-config_logging(filename=log_file, level=logging.INFO)
-
-logger = logging.getLogger("start_ur3e_mockup")
+from startup.utils.logging_config import get_logger
 
 
 def _get_executable_path(system, machine):
@@ -57,11 +48,13 @@ def _get_executable_path(system, machine):
     return executable_path
 
 
+
 def start_robot_arm_mockup(ok_queue=None):
     """
     Starts the ur3e_mockup executable and keeps it running.
     Handles graceful shutdown via Ctrl+C (SIGINT).
     """
+    logger = get_logger("ur3e_mockup")
     # Get the platform-specific executable path
     system = platform.system()
     machine = platform.machine()
