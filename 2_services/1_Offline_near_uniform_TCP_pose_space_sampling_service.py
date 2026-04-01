@@ -6,6 +6,9 @@
 # So this file generates the angles and the poses corresponding to a near-uniform TCP pose space 
 # sampling for both the PT and the DT. 
 
+# We will also setup the communication to send commands and recieve outputs/messages from/to the 
+# PT/teacher's mockup. 
+
 
 
 
@@ -47,8 +50,8 @@ ur3e_model = rtb.DHRobot(
 
 # Start Configuration
 
-NUM_SAMPLES = 3000
-SAFE_Z_THRESHOLD = 0.02
+NUM_SAMPLES = 20160
+SAFE_Z_THRESHOLD = 0.03
 SETTLE_TIME = 0.5
 OUTPUT_FILE = "dataset.csv"
 
@@ -104,14 +107,28 @@ def get_tcp_pose():
 
 # Sampling
 
-def sample_joint_angles():
-    return np.array([
-        np.random.uniform(low, high)
-        for low, high in JOINT_LIMITS
-    ])
+def get_joint_sampling_config():
+    # From your table
+    N = [14, 12, 8, 5, 3, 1]  # number of samples per joint
+
+    joint_ranges = []
+
+    for i, (low, high) in enumerate(JOINT_LIMITS):
+        joint_ranges.append(np.linspace(low, high, N[i]))
+
+    return joint_ranges
 
 
+def structured_sampling():
+    joint_ranges = get_joint_sampling_config()
 
+    for q1 in joint_ranges[0]:
+        for q2 in joint_ranges[1]:
+            for q3 in joint_ranges[2]:
+                for q4 in joint_ranges[3]:
+                    for q5 in joint_ranges[4]:
+                        for q6 in joint_ranges[5]:
+                            yield np.array([q1, q2, q3, q4, q5, q6])
 
 
 
@@ -122,8 +139,18 @@ def sample_joint_angles():
 
 def is_safe(q):
     try:
-        tcp = forward_kinematics(q)
-        return tcp[2] > SAFE_Z_THRESHOLD
+        for i in range(1, 7):
+            q_partial = np.zeros(6)
+            q_partial[:i] = q[:i]
+
+            partial_fk = ur3e_model.fkine(q_partial)
+            z = partial_fk.t[2]
+
+            if z < SAFE_Z_THRESHOLD:
+                return False
+
+        return True
+
     except:
         return False
 
@@ -140,14 +167,15 @@ def is_safe(q):
 def collect_data():
     data = []
     count = 0
-    attempts = 0
+
 
     print("Starting data collection...\n")
 
-    while count < NUM_SAMPLES:
-        attempts += 1
+    for q in structured_sampling():
 
-        q = sample_joint_angles()
+        if count >= NUM_SAMPLES:
+            break
+       
 
         if not is_safe(q):
             continue
@@ -169,7 +197,7 @@ def collect_data():
         if count % 100 == 0:
             print(f"{count}/{NUM_SAMPLES} samples collected")
 
-    print(f"\nDone. Total attempts: {attempts}")
+    print(f"\nDone. Total collected: {count}")
     return data
 
 
