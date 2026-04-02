@@ -7,7 +7,7 @@
 # sampling for both the PT and the DT. 
 
 # We will also setup the communication to send commands and recieve outputs/messages from/to the 
-# PT/teacher's mockup. 
+# PT/teacher's mockup, in order to create the csv file. 
 
 
 
