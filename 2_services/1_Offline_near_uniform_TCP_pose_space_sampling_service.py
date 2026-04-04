@@ -1,4 +1,14 @@
 
+# Author: Nikan Mahdavi Tabatabaei
+
+# Note Generative AI helped slightly with the python coding in this service for convinience, but 
+# not for the system-level planning, as the DT-engineering and both all of the general and detailed 
+# system planning in this service was completely done by the author and not GAI at all. Even the 
+# code-level planning was done by the author and not GAI. GAI was only sometimes used as a python coding 
+# interface for our fully system-level and code-level planned implementation, to get the python syntaxes correct. 
+
+
+
 # Here we will create a near-uniform TCP pose space sampling service, which we will primary use for 
 # sampling the TCP pose space of the mockup and our model, which is in turn used for a machine 
 # learning-based error correction/calibration service. 
@@ -19,6 +29,7 @@
 
 # We will also setup the communication to send commands and recieve outputs/messages from/to the
 # PT/teacher's mockup, in order to create the csv file.
+
 
 
 
@@ -68,14 +79,18 @@ ur3e_model = rtb.DHRobot(
 
 # Start Configuration
 
-NUM_SAMPLES = 20160
-SAFE_Z_THRESHOLD = 0.03
-SETTLE_TIME = 0.5
-OUTPUT_FILE = "dataset.csv"
+NUM_SAMPLES = 1000
+SAFE_Z_THRESHOLD = 0.075   # We set it as half of d_1, i.e., base link length, (or d_0 in UR3e 
+# pircture from their wibsite), Which is just an approximation of bulk/diameter of the links and 
+# joints, which might collide with the ground, being aware of the fact that the bulkniess of the 
+# joints and links decreases as we move away from the base, making the threshold only more secure. 
 
-MOVE_TIMEOUT = 15.0
-POSE_TIMEOUT = 5.0
-Q_MATCH_TOL = 0.03  # rad
+SETTLE_TIME = 0.5
+OUTPUT_FILE = "1_dataset.csv"
+
+MOVE_TIMEOUT = 20.0
+POSE_TIMEOUT = 10.0
+Q_MATCH_TOL = 0.1   # in radians
 
 # UR3e joint limits (adjust if needed)
 JOINT_LIMITS = [
@@ -123,39 +138,23 @@ def angle_diff(a, b):
 
 
 def on_state_message_received(channel, method, properties, body):
-    """
-    Receives PT state messages and stores latest values.
-
-    Assumes body is a dict with:
-        protocol.StateMsgKeys.TYPE
-        protocol.StateMsgKeys.VALUE
-
-    If your body prints differently, only this function needs adjusting.
-    """
     global latest_state
-
-    # Uncomment these 2 lines once if you want to inspect the exact message format:
-    # print("STATE MESSAGE:")
-    # print(body)
 
     if not isinstance(body, dict):
         return
 
     with state_lock:
-        msg_type = body.get(protocol.StateMsgKeys.TYPE)
-        value = body.get(protocol.StateMsgKeys.VALUE)
+        if "tcp_pose" in body:
+            latest_state["tcp_pose"] = np.array(body["tcp_pose"], dtype=float)
 
-        if msg_type == protocol.StateMsgFields.TCP_POSE:
-            latest_state["tcp_pose"] = np.array(value, dtype=float)
+        if "q_actual" in body:
+            latest_state["q_actual"] = np.array(body["q_actual"], dtype=float)
 
-        elif msg_type == protocol.StateMsgFields.Q_ACTUAL:
-            latest_state["q_actual"] = np.array(value, dtype=float)
+        if "q_target" in body:
+            latest_state["q_target"] = np.array(body["q_target"], dtype=float)
 
-        elif msg_type == protocol.StateMsgFields.Q_TARGET:
-            latest_state["q_target"] = np.array(value, dtype=float)
-
-        elif msg_type == protocol.StateMsgFields.ROBOT_MODE:
-            latest_state["robot_mode"] = value
+        if "robot_mode" in body:
+            latest_state["robot_mode"] = body["robot_mode"]
 
     state_event.set()
 
@@ -166,23 +165,27 @@ def receiver():
     """
     global receiver_rmq
 
-    receiver_rmq = Rabbitmq(
-        ip="localhost",
-        port=5672,
-        username="ur3e",
-        password="ur3e",
-        vhost="/",
-        exchange="UR3E_AMQP",
-        type="topic",
-    )
-    receiver_rmq.connect_to_server()
+    try:
+        receiver_rmq = Rabbitmq(
+            ip="localhost",
+            port=5672,
+            username="ur3e",
+            password="ur3e",
+            vhost="/",
+            exchange="UR3E_AMQP",
+            type="topic",
+        )
+        receiver_rmq.connect_to_server()
 
-    receiver_rmq.subscribe(
-        protocol.ROUTING_KEY_STATE,
-        on_state_message_received
-    )
+        receiver_rmq.subscribe(
+            "robotarm.pt.state",
+            on_state_message_received
+        )
 
-    receiver_rmq.start_consuming()
+        receiver_rmq.start_consuming()
+
+    except Exception as e:
+        print(f"Receiver stopped: {e}")
 
 
 def start_robot_interface():
@@ -192,6 +195,8 @@ def start_robot_interface():
     - one sender RMQ connection for control messages
     """
     global sender_rmq, receiver_thread
+
+    state_event.clear()
 
     receiver_thread = Thread(target=receiver, daemon=True)
     receiver_thread.start()
@@ -209,9 +214,9 @@ def start_robot_interface():
 
     # Wait until at least one state message arrives
     if not state_event.wait(timeout=POSE_TIMEOUT):
-        raise RuntimeError("No robot state messages received.")
+        raise RuntimeError("No state messages received from the robot.")
 
-    print("✓ Robot interface started")
+    print("The robot is now interfaced")
 
 
 def stop_robot_interface():
@@ -233,6 +238,26 @@ def stop_robot_interface():
         except Exception as e:
             print(f"Warning closing receiver RabbitMQ: {e}")
         receiver_rmq = None
+
+
+
+# If RMQ connection is lost
+def restart_robot_interface():
+    global state_event
+
+    print("RabbitMQ connection lost. Waiting to reconnect...")
+
+    while True:
+        try:
+            stop_robot_interface()
+            time.sleep(2.0)
+            state_event.clear()
+            start_robot_interface()
+            print("✓ Robot interface reconnected")
+            return
+        except Exception as e:
+            print(f"Reconnect failed: {e}")
+            time.sleep(2.0)
 
 
 def send_joint_command(q):
@@ -283,21 +308,27 @@ def get_tcp_pose():
     return np.array(tcp_pose, dtype=float)
 
 
+
 def wait_until_target_reached(q_target, timeout=MOVE_TIMEOUT, tol=Q_MATCH_TOL):
-    """
-    Wait until PT actual joints are close to target.
-    """
+    # Wait until (3 conditions) PT actual joints are close to target and robot is Idle, 
+    # and also if the receiver thread is "alive".
+
     start = time.time()
     q_target = np.array(q_target, dtype=float)
 
     while time.time() - start < timeout:
+        if receiver_thread is not None and not receiver_thread.is_alive():
+            raise RuntimeError("Receiver thread died.")
+
         with state_lock:
             q_actual = latest_state["q_actual"]
+            robot_mode = latest_state["robot_mode"]
 
         if q_actual is not None:
             q_actual = np.array(q_actual, dtype=float)
             err = np.max(np.abs(angle_diff(q_actual, q_target)))
-            if err < tol:
+
+            if err < tol and robot_mode == "Idle":
                 return True
 
         time.sleep(0.05)
@@ -312,13 +343,17 @@ def wait_until_target_reached(q_target, timeout=MOVE_TIMEOUT, tol=Q_MATCH_TOL):
 # Sampling
 
 def get_joint_sampling_config():
-    # From your table
-    N = [14, 12, 8, 5, 3, 1]  # number of samples per joint
+    # From our table:
+    N = [14, 12, 8, 5, 3, 1]
 
     joint_ranges = []
 
-    for i, (low, high) in enumerate(JOINT_LIMITS):
-        joint_ranges.append(np.linspace(low, high, N[i]))
+    # only to get last joint to be at center, since there is only 1 place it can be:
+    for (low, high), n in zip(JOINT_LIMITS, N):
+        if n == 1:
+            joint_ranges.append(np.array([(low + high) / 2]))
+        else:
+            joint_ranges.append(np.linspace(low, high, n))
 
     return joint_ranges
 
@@ -336,6 +371,15 @@ def structured_sampling():
 
 
 
+# introduce random joint selection within our samples, usefull when using number of samples < 20k, 
+# in order to get a more uniform sampling. 
+def random_sampling(num_samples):
+    samples = list(structured_sampling())
+    np.random.shuffle(samples)
+
+    for q in samples[:num_samples]:
+        yield q
+
 
 
 
@@ -343,15 +387,24 @@ def structured_sampling():
 
 def is_safe(q):
     try:
+        all_fk = ur3e_model.fkine_all(q)
+        joint_positions = []
+
+        # collect positions of link frames 1..6
         for i in range(1, 7):
-            q_partial = np.zeros(6)
-            q_partial[:i] = q[:i]
+            p = all_fk[i].t
+            joint_positions.append(p)
 
-            partial_fk = ur3e_model.fkine(q_partial)
-            z = partial_fk.t[2]
-
-            if z < SAFE_Z_THRESHOLD:
+            if p[2] < SAFE_Z_THRESHOLD:
                 return False
+
+        # Reject configurations where non-neighboring (and non next-neighboring) joints get too close
+        MIN_SELF_DIST = 0.02   # meters
+
+        for i in range(len(joint_positions)):
+            for j in range(i + 3, len(joint_positions)):   # skip neighboring and next-neighboring joints
+                if np.linalg.norm(joint_positions[i] - joint_positions[j]) < MIN_SELF_DIST:
+                    return False
 
         return True
 
@@ -370,12 +423,12 @@ def collect_data():
     data = []
     count = 0
 
-    print("Starting data collection...\n")
+    print("Started the data computation and collection ...\n")
 
     start_robot_interface()
 
     try:
-        for q in structured_sampling():
+        for q in random_sampling(NUM_SAMPLES):
 
             if count >= NUM_SAMPLES:
                 break
@@ -387,29 +440,50 @@ def collect_data():
             tcp_dt = forward_kinematics(q)
 
             # PHYSICAL TWIN
-            send_joint_command(q)
+            while True:
+                try:
+                    send_joint_command(q)
 
-            reached = wait_until_target_reached(q)
-            if not reached:
-                print(f"Skipping sample {count+1}: target not reached in time.")
+                    reached = wait_until_target_reached(q)
+                    if not reached:
+                        print(f"Skipping sample {count+1}: target not reached in time.")
+                        q_pt = None
+                        break
+
+                    time.sleep(SETTLE_TIME)
+
+                    with state_lock:
+                        q_pt = latest_state["q_actual"]
+
+
+                    if q_pt is None:
+                        print(f"Skipping sample {count+1}: no PT joint angles received.")
+                        q_pt = None
+                        break
+
+                    q_pt = np.array(q_pt, dtype=float)
+                    break
+
+                except Exception as e:
+                    print(f"RabbitMQ error: {e}")
+                    restart_robot_interface()
+
+            if q_pt is None:
                 continue
 
-            time.sleep(SETTLE_TIME)
-            tcp_pt = get_tcp_pose()
-
             # STORE
-            row = np.concatenate([q, tcp_dt, tcp_pt])
+            dq = angle_diff(q_pt, q)
+            row = np.concatenate([q, q_pt, dq, tcp_dt])
             data.append(row)
 
             count += 1
 
-            if count % 100 == 0:
-                print(f"{count}/{NUM_SAMPLES} samples collected")
+            print(f"{count} out of {NUM_SAMPLES} samples are collected succesfully so far")
 
     finally:
         stop_robot_interface()
 
-    print(f"\nDone. Total collected: {count}")
+    print(f"\nFinished. Total Valid Combinations: {count}")
     return data
 
 
@@ -421,35 +495,17 @@ def collect_data():
 # Saving the Dataset
 
 def save_dataset(data):
-    new_data = []
-
-    for row in data:
-        tcp_dt = row[6:12]
-        tcp_pt = row[12:18]
-
-        # Position error
-        pos_error = tcp_pt[0:3] - tcp_dt[0:3]
-
-        # Orientation error (wrapped)
-        rot_error = angle_diff(tcp_pt[3:6], tcp_dt[3:6])
-
-        error = np.concatenate([pos_error, rot_error])
-
-        # Append error to existing row
-        new_row = np.concatenate([row, error])
-        new_data.append(new_row)
-
     columns = [
-        "q1", "q2", "q3", "q4", "q5", "q6",
-        "x_dt", "y_dt", "z_dt", "roll_dt", "pitch_dt", "yaw_dt",
-        "x_pt", "y_pt", "z_pt", "roll_pt", "pitch_pt", "yaw_pt",
-        "dx", "dy", "dz", "droll", "dpitch", "dyaw"
+        "q1_DT", "q2_DT", "q3_DT", "q4_DT", "q5_DT", "q6_DT",
+        "q1_PT", "q2_PT", "q3_PT", "q4_PT", "q5_PT", "q6_PT",
+        "q1_e", "q2_e", "q3_e", "q4_e", "q5_e", "q6_e",
+        "x_DT", "y_DT", "z_DT", "roll_DT", "pitch_DT", "yaw_DT"
     ]
 
-    df = pd.DataFrame(new_data, columns=columns)
+    df = pd.DataFrame(data, columns=columns)
     df.to_csv(OUTPUT_FILE, index=False)
 
-    print(f"Dataset saved to {OUTPUT_FILE}")
+    print(f"Dataset was saved to {OUTPUT_FILE}")
 
 
 
@@ -458,66 +514,53 @@ def save_dataset(data):
 
 # Visualize
 
-def plot_3d_workspace(csv_file=OUTPUT_FILE):
+def plot_3d_posespace(csv_file=OUTPUT_FILE):
     df = pd.read_csv(csv_file)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    ax.scatter(df["x_dt"], df["y_dt"], df["z_dt"], s=2)
+    ax.scatter(df["x_DT"], df["y_DT"], df["z_DT"], s=2)
 
-    ax.set_title("3D TCP Workspace (DT)")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
+    ax.set_title("3D TCP pose space (DT)")
+    ax.set_xlabel("X [meters]")
+    ax.set_ylabel("Y [meters]")
+    ax.set_zlabel("Z [meters]")
 
     plt.show()
 
 
-def plot_heatmaps(csv_file=OUTPUT_FILE):
+def plot_concentration(csv_file=OUTPUT_FILE):
     df = pd.read_csv(csv_file)
 
-    x = df["x_dt"]
-    y = df["y_dt"]
-    z = df["z_dt"]
+    x = df["x_DT"]
+    y = df["y_DT"]
+    z = df["z_DT"]
 
     fig, axs = plt.subplots(1, 3, figsize=(15, 4))
 
-    # XY heatmap
-    h, xedges, yedges = np.histogram2d(x, y, bins=50)
-    axs[0].imshow(
-        h.T,
-        origin='lower',
-        aspect='auto',
-        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    )
-    axs[0].set_title("XY Density")
-    axs[0].set_xlabel("X")
-    axs[0].set_ylabel("Y")
+    # XY
+    axs[0].scatter(x, y, s=5)
+    axs[0].set_title("XY Projection (DT TCP space 2D)")
+    axs[0].set_xlabel("X [meters]")
+    axs[0].set_ylabel("Y [meters]")
+    axs[0].grid(True)
 
-    # XZ heatmap
-    h, xedges, zedges = np.histogram2d(x, z, bins=50)
-    axs[1].imshow(
-        h.T,
-        origin='lower',
-        aspect='auto',
-        extent=[xedges[0], xedges[-1], zedges[0], zedges[-1]]
-    )
-    axs[1].set_title("XZ Density")
-    axs[1].set_xlabel("X")
-    axs[1].set_ylabel("Z")
+    # XZ
+    axs[1].scatter(x, z, s=5)
+    axs[1].set_title("XZ Projection (DT TCP space 2D)")
+    axs[1].set_xlabel("X [meters]")
+    axs[1].set_ylabel("Z [meters]")
+    axs[1].grid(True)
 
-    # YZ heatmap
-    h, yedges, zedges = np.histogram2d(y, z, bins=50)
-    axs[2].imshow(
-        h.T,
-        origin='lower',
-        aspect='auto',
-        extent=[yedges[0], yedges[-1], zedges[0], zedges[-1]]
-    )
-    axs[2].set_title("YZ Density")
-    axs[2].set_xlabel("Y")
-    axs[2].set_ylabel("Z")
+    # YZ
+    axs[2].scatter(y, z, s=5)
+    axs[2].set_title("YZ Projection (DT TCP space 2D)")
+    axs[2].set_xlabel("Y [meters]")
+    axs[2].set_ylabel("Z [meters]")
+    axs[2].grid(True)
+
+
 
     plt.tight_layout()
     plt.show()
@@ -534,5 +577,5 @@ if __name__ == "__main__":
     save_dataset(data)
 
     # Visualization
-    plot_3d_workspace()
-    plot_heatmaps()
+    plot_3d_posespace()
+    plot_concentration()
