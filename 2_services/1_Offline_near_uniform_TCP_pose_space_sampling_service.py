@@ -5,31 +5,20 @@
 # not for the system-level planning, as the DT-engineering and both all of the general and detailed 
 # system planning in this service was completely done by the author and not GAI at all. Even the 
 # code-level planning was done by the author and not GAI. GAI was only sometimes used as a python coding 
-# interface for our fully system-level and code-level planned implementation, to get the python syntaxes correct. 
+# interface for our fully system-level and code-level pre-planned implementation, to get the python 
+# syntaxes correct. 
 
 
 
 # Here we will create a near-uniform TCP pose space sampling service, which we will primary use for 
-# sampling the TCP pose space of the mockup and our model, which is in turn used for a machine 
+# sampling the TCP pose space of the mockup and our model, and use their angles in turn for a machine 
 # learning-based error correction/calibration service. 
 
-# So this file generates the angles and the poses corresponding to a near-uniform TCP pose space 
-# sampling for both the PT and the DT. 
+# So this file generates the angles (and the poses TCP corresponding for plotting) of a near-uniformly 
+# sampled TCP pose space for both the PT and the DT. 
 
 # We will also setup the communication to send commands and recieve outputs/messages from/to the 
 # PT/teacher's mockup, in order to create the csv file. 
-
-
-# Here we will create a near-uniform TCP pose space sampling service, which we will primary use for
-# sampling the TCP pose space of the mockup and our model, which is in turn used for a machine
-# learning-based error correction/calibration service.
-
-# So this file generates the angles and the poses corresponding to a near-uniform TCP pose space
-# sampling for both the PT and the DT.
-
-# We will also setup the communication to send commands and recieve outputs/messages from/to the
-# PT/teacher's mockup, in order to create the csv file.
-
 
 
 
@@ -57,7 +46,7 @@ from communication.rabbitmq import Rabbitmq
 
 
 
-# Define the UR3e DH model
+# Defining the UR3e DH model
 
 link1 = rtb.RevoluteDH(d=0.15185, a=0, alpha=np.pi/2)
 link2 = rtb.RevoluteDH(d=0, a=-0.24355, alpha=0)
@@ -77,7 +66,7 @@ ur3e_model = rtb.DHRobot(
 
 
 
-# Start Configuration
+# Starting the Configuration
 
 NUM_SAMPLES = 100
 SAFE_Z_THRESHOLD = 0.075   # We set it as half of d_1, i.e., base link length, (or d_0 in UR3e 
@@ -92,7 +81,7 @@ MOVE_TIMEOUT = 20.0
 POSE_TIMEOUT = 10.0
 Q_MATCH_TOL = 0.1   # in radians
 
-# UR3e joint limits (adjust if needed)
+# Joint limits
 JOINT_LIMITS = [
     (-2*np.pi, 2*np.pi),
     (-2*np.pi, 2*np.pi),
@@ -102,7 +91,8 @@ JOINT_LIMITS = [
     (-2*np.pi, 2*np.pi),
 ]
 
-# RabbitMQ shared state
+
+# RabbitMQ states (shared)
 sender_rmq = None
 receiver_rmq = None
 receiver_thread = None
@@ -122,7 +112,7 @@ state_event = Event()
 
 
 
-# Start Defining the System Functions
+# Start Defining all the System Functions
 
 def forward_kinematics(q):
     result = ur3e_model.fkine(q)
@@ -160,9 +150,9 @@ def on_state_message_received(channel, method, properties, body):
 
 
 def receiver():
-    """
-    Dedicated receiver thread for PT state messages.
-    """
+
+    # A receiver thread for thestate messages of the PT.
+
     global receiver_rmq
 
     try:
@@ -185,15 +175,13 @@ def receiver():
         receiver_rmq.start_consuming()
 
     except Exception as e:
-        print(f"Receiver stopped: {e}")
+        print(f"Receiver was stopped: {e}")
 
 
 def start_robot_interface():
-    """
-    Start:
-    - one receiver thread listening to PT state
-    - one sender RMQ connection for control messages
-    """
+    # Here one receiver thread listening to PT state
+    # And one sender RMQ connection for control messages
+
     global sender_rmq, receiver_thread
 
     state_event.clear()
@@ -212,7 +200,7 @@ def start_robot_interface():
     )
     sender_rmq.connect_to_server()
 
-    # Wait until at least one state message arrives
+    # Waits until at least one of the state messages arrives
     if not state_event.wait(timeout=POSE_TIMEOUT):
         raise RuntimeError("No state messages received from the robot.")
 
@@ -220,9 +208,8 @@ def start_robot_interface():
 
 
 def stop_robot_interface():
-    """
-    Close sender and receiver RMQ connections.
-    """
+    # Close tboth he sender and the receiver RMQ connections.
+
     global sender_rmq, receiver_rmq
 
     if sender_rmq is not None:
@@ -241,11 +228,11 @@ def stop_robot_interface():
 
 
 
-# If RMQ connection is lost
+# If RMQ connection is lost:
 def restart_robot_interface():
     global state_event
 
-    print("RabbitMQ connection lost. Waiting to reconnect...")
+    print("RabbitMQ connection was lost. re-connecting...")
 
     while True:
         try:
@@ -253,22 +240,18 @@ def restart_robot_interface():
             time.sleep(2.0)
             state_event.clear()
             start_robot_interface()
-            print("✓ Robot interface reconnected")
+            print("✓ Robot interface was reconnected")
             return
         except Exception as e:
-            print(f"Reconnect failed: {e}")
+            print(f"Re-connection failed: {e}")
             time.sleep(2.0)
 
 
 def send_joint_command(q):
-    """
-    Send joint angles to PT mockup using:
-    1) LOAD_PROGRAM
-    2) PLAY
+    # Send joint angles to PT mockup using the LOAD_PROGRAM and the PLAY
 
-    Velocity and acceleration are omitted so the mockup uses
-    its defaults from startup.conf.
-    """
+    # Here velocity and acceleration are omitted so the mockup uses its defaults from the startup.conf.
+
     if sender_rmq is None:
         raise RuntimeError("Sender RabbitMQ interface not started.")
 
@@ -295,15 +278,16 @@ def send_joint_command(q):
 
 
 def get_tcp_pose():
-    """
-    Read latest TCP pose from PT.
-    Returns: [x, y, z, roll, pitch, yaw]
-    """
+    # Reads latest TCP poses from the PT.
+
+    # Returns the following: 
+    # [x, y, z, roll, pitch, yaw]
+
     with state_lock:
         tcp_pose = latest_state["tcp_pose"]
 
     if tcp_pose is None:
-        raise RuntimeError("No TCP pose received yet.")
+        raise RuntimeError("No TCP poses ahve been received yet.")
 
     return np.array(tcp_pose, dtype=float)
 
@@ -318,7 +302,7 @@ def wait_until_target_reached(q_target, timeout=MOVE_TIMEOUT, tol=Q_MATCH_TOL):
 
     while time.time() - start < timeout:
         if receiver_thread is not None and not receiver_thread.is_alive():
-            raise RuntimeError("Receiver thread died.")
+            raise RuntimeError("Receiver thread just died.")
 
         with state_lock:
             q_actual = latest_state["q_actual"]
@@ -344,12 +328,11 @@ def wait_until_target_reached(q_target, timeout=MOVE_TIMEOUT, tol=Q_MATCH_TOL):
 
 def get_joint_sampling_config():
     # From our table:
-    # N = [14, 12, 8, 5, 3, 1]
-    N = [n * 10 for n in [14, 12, 8, 5, 3, 1]]
+    N = [14, 12, 8, 5, 3, 1]
 
     joint_ranges = []
 
-    # only to get last joint to be at center, since there is only 1 place it can be:
+    # only to get last joint to be at center, since there is actually only 1 place it can be:
     for (low, high), n in zip(JOINT_LIMITS, N):
         if n == 1:
             joint_ranges.append(np.array([(low + high) / 2]))
@@ -391,7 +374,7 @@ def is_safe(q):
         all_fk = ur3e_model.fkine_all(q)
         joint_positions = []
 
-        # collect positions of link frames 1..6
+        # collect positions of link frames 1 to 6.
         for i in range(1, 7):
             p = all_fk[i].t
             joint_positions.append(p)
@@ -447,7 +430,7 @@ def collect_data():
 
                     reached = wait_until_target_reached(q)
                     if not reached:
-                        print(f"Skipping sample {count+1}: target not reached in time.")
+                        print(f"Skipping this sample: {count+1}. target was not reached in time.")
                         q_pt = None
                         break
 
@@ -458,7 +441,7 @@ def collect_data():
 
 
                     if q_pt is None:
-                        print(f"Skipping sample {count+1}: no PT joint angles received.")
+                        print(f"Skipping this sample: {count+1}. none of the PT joint angles were received.")
                         q_pt = None
                         break
 
@@ -466,7 +449,7 @@ def collect_data():
                     break
 
                 except Exception as e:
-                    print(f"RabbitMQ error: {e}")
+                    print(f"RMQ error: {e}")
                     restart_robot_interface()
 
             if q_pt is None:
@@ -577,6 +560,8 @@ if __name__ == "__main__":
     data = collect_data()
     save_dataset(data)
 
-    # Visualization
+    # and for the visualization
     plot_3d_posespace()
     plot_concentration()
+
+    
