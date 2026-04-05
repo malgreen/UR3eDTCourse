@@ -79,7 +79,7 @@ ur3e_model = rtb.DHRobot(
 
 # Start Configuration
 
-NUM_SAMPLES = 1000
+NUM_SAMPLES = 100
 SAFE_Z_THRESHOLD = 0.075   # We set it as half of d_1, i.e., base link length, (or d_0 in UR3e 
 # pircture from their wibsite), Which is just an approximation of bulk/diameter of the links and 
 # joints, which might collide with the ground, being aware of the fact that the bulkniess of the 
@@ -344,7 +344,8 @@ def wait_until_target_reached(q_target, timeout=MOVE_TIMEOUT, tol=Q_MATCH_TOL):
 
 def get_joint_sampling_config():
     # From our table:
-    N = [14, 12, 8, 5, 3, 1]
+    # N = [14, 12, 8, 5, 3, 1]
+    N = [n * 10 for n in [14, 12, 8, 5, 3, 1]]
 
     joint_ranges = []
 
