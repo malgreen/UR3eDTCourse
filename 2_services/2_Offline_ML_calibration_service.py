@@ -26,7 +26,9 @@ import joblib
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPRegressor
+import torch
+import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score
 from tqdm import tqdm
@@ -46,8 +48,8 @@ TARGET_COLUMNS = [
 ]
 
 
-TARGET_SCALE = 1.0
-N_EPOCHS = 100
+TARGET_SCALE = 1e9
+N_EPOCHS = 1000
 BATCH_SIZE = 4
 
 
@@ -59,7 +61,6 @@ df = pd.read_csv(INPUT_FILE)
 
 X = df[INPUT_COLUMNS].to_numpy(dtype=float)
 y = df[TARGET_COLUMNS].to_numpy(dtype=float)
-
 
 
 
@@ -77,6 +78,12 @@ X_val, X_test, y_val, y_test = train_test_split(
 
 
 
+y_scaler = StandardScaler()
+
+y_train = y_scaler.fit_transform(y_train)
+y_val = y_scaler.transform(y_val)
+y_test = y_scaler.transform(y_test)
+
 
 
 
@@ -91,24 +98,43 @@ X_all = x_scaler.transform(X)
 
 
 
+X_train_t = torch.tensor(X_train, dtype=torch.float32)
+y_train_t = torch.tensor(y_train, dtype=torch.float32)
+
+X_val_t = torch.tensor(X_val, dtype=torch.float32)
+y_val_t = torch.tensor(y_val, dtype=torch.float32)
+
+X_test_t = torch.tensor(X_test, dtype=torch.float32)
+y_test_t = torch.tensor(y_test, dtype=torch.float32)
+
+
+
+train_dataset = TensorDataset(X_train_t, y_train_t)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+
 
 # The model
 
-base_model = MLPRegressor(
-    hidden_layer_sizes=(32, 32, 24, 16, 8),
-    activation="relu",
-    solver="adam",
-    batch_size=BATCH_SIZE,
-    learning_rate_init=0.001,
-    alpha=0.001,
-    max_iter=1,
-    warm_start=True,
-    random_state=42
-)
+class MLPModel(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 8),
+            nn.ReLU(),
+            nn.Linear(8, output_dim)
+        )
 
-model = base_model
+    def forward(self, x):
+        return self.net(x)
+
+model = MLPModel(input_dim=X_train.shape[1], output_dim=y_train.shape[1])
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
 
 
+
+# The training loop
 
 # The training loop
 
@@ -121,11 +147,21 @@ val_loss = []
 epochs = []
 
 for epoch in tqdm(range(1, N_EPOCHS + 1), desc="Training Epochs", colour="green"):
+    model.train()
+    batch_losses = []
 
-    model.fit(X_train, y_train)
+    for xb, yb in train_loader:
+        optimizer.zero_grad()
+        preds = model(xb)
+        loss = criterion(preds, yb)
+        loss.backward()
+        optimizer.step()
+        batch_losses.append(loss.item())
 
-    y_train_pred = model.predict(X_train)
-    y_val_pred = model.predict(X_val)
+    model.eval()
+    with torch.no_grad():
+        y_train_pred = model(X_train_t).cpu().numpy()
+        y_val_pred = model(X_val_t).cpu().numpy()
 
     train_r2.append(r2_score(y_train, y_train_pred, multioutput="uniform_average"))
     val_r2.append(r2_score(y_val, y_val_pred, multioutput="uniform_average"))
@@ -140,7 +176,9 @@ for epoch in tqdm(range(1, N_EPOCHS + 1), desc="Training Epochs", colour="green"
 
 # Testing 
 
-y_test_pred = model.predict(X_test)
+model.eval()
+with torch.no_grad():
+    y_test_pred = model(X_test_t).cpu().numpy()
 
 test_r2 = r2_score(y_test, y_test_pred, multioutput="uniform_average")
 test_loss = mean_squared_error(y_test, y_test_pred)
@@ -151,19 +189,19 @@ print(f"MSE : {test_loss:.6f}")
 
 
 
-# Re-scaling the values back to the original radiens
+# Back to the original radians
 
-y_test_rad = y_test / TARGET_SCALE
-y_pred_rad = y_test_pred / TARGET_SCALE
+y_test_rad = y_scaler.inverse_transform(y_test)
+y_pred_rad = y_scaler.inverse_transform(y_test_pred)
 
-test_mse_rad = mean_squared_error(y_test_rad, y_pred_rad) # MSE of: the error prediction vs the real error. 
+test_mse_rad = mean_squared_error(y_test_rad, y_pred_rad)
 
-y_test_rad = np.mean(y_test / TARGET_SCALE)
-y_pred_rad = np.mean(y_test_pred / TARGET_SCALE)
+mean_y_test_rad = np.mean(y_test_rad)
+mean_y_pred_rad = np.mean(y_pred_rad)
 
 print(f"\nTest MSE (radians): {test_mse_rad:.4e}")
-print(f"\nPredicted Test Mean (radians): {y_pred_rad:.4e}")
-print(f"\nActual Test Mean (radians): {y_test_rad:.4e}")
+print(f"\nPredicted Test Mean (radians): {mean_y_pred_rad:.4e}")
+print(f"\nActual Test Mean (radians): {mean_y_test_rad:.4e}")
 print("Test's R2 score:", test_r2)
 
 
@@ -172,9 +210,9 @@ print("Test's R2 score:", test_r2)
 
 joblib.dump(
     {
-        "model": model,
+        "model_state_dict": model.state_dict(),
         "x_scaler": x_scaler,
-        "target_scale": TARGET_SCALE,
+        "y_scaler": y_scaler,
         "input_columns": INPUT_COLUMNS,
         "target_columns": TARGET_COLUMNS
     },
