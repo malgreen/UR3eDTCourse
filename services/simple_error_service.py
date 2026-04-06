@@ -131,24 +131,28 @@ class SimpleErrorService:
                 sim  TCP position: {self.latest_sim_tcp_pose[:3]}
             """)
 
+            error_found = False
             for i in range(3):  # check the X, Y, and Z differences
                 if (
                     abs(self.latest_pt_tcp_pose[i] - self.latest_sim_tcp_pose[i])
                     > self.max_diff
                 ):
-                    self.rmq.send_message(
-                        protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE,
-                        {
-                            protocol.SimpleErrorMsgKeys.STATUS: True,
-                            protocol.SimpleErrorMsgKeys.ACTUAL_POSITION: self.latest_pt_tcp_pose[
-                                :3
-                            ],
-                            protocol.SimpleErrorMsgKeys.SIMULATED_POISITION: self.latest_sim_tcp_pose[
-                                :3
-                            ],
-                        },
-                    )
-                    self.log.info("Error found, message sent")
+                    error_found = True
+
+            if error_found:
+                self.rmq.send_message(
+                    protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE,
+                    {
+                        protocol.SimpleErrorMsgKeys.STATUS: True,
+                        protocol.SimpleErrorMsgKeys.ACTUAL_POSITION: self.latest_pt_tcp_pose[
+                            :3
+                        ],
+                        protocol.SimpleErrorMsgKeys.SIMULATED_POISITION: self.latest_sim_tcp_pose[
+                            :3
+                        ],
+                    },
+                )
+                self.log.info("Error found, message sent")
 
             self.state = SimpleErrorServiceState.WAIT_FOR_LOAD
             self.log.info(f"Handled PT STATE message, setting state to {self.state}")
