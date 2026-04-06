@@ -66,7 +66,7 @@ y = df[TARGET_COLUMNS].to_numpy(dtype=float)
 
 
 
-# Data splitting into 70/10/20
+# Data splitting into the 70/10/20 ratios
 
 X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42
@@ -133,8 +133,6 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
 
 
-
-# The training loop
 
 # The training loop
 
@@ -206,7 +204,7 @@ print("Test's R2 score:", test_r2)
 
 
 
-# Save the model parameters for the next service
+# Save the model parameters for the next service using joblib
 
 joblib.dump(
     {
