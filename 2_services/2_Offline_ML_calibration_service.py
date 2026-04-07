@@ -120,9 +120,15 @@ class MLPModel(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 8),
+            nn.Linear(input_dim, 32),
             nn.ReLU(),
-            nn.Linear(8, output_dim)
+            nn.Linear(32, 32),
+            nn.ReLU(),
+            nn.Linear(32, 24),
+            nn.ReLU(),
+            nn.Linear(24, 16),
+            nn.ReLU(),
+            nn.Linear(16, output_dim)
         )
 
     def forward(self, x):
