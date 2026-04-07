@@ -1,7 +1,5 @@
 import json
-import logging
 import traceback
-from os import path
 
 import numpy as np
 import roboticstoolbox as rtb
@@ -87,6 +85,7 @@ class SimulationService:
                 target_joint_positions = body.get(
                     protocol.SimCtrlMsgKeys.JOINT_POSITIONS
                 )
+                self.model.q = target_joint_positions
                 self.head = self.model.fkine(target_joint_positions)
                 self.log.info("Sending SIM STATE message")
                 self.rmq.send_message(
