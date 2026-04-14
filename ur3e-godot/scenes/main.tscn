@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://kxclk5mgfsyv"]
+
+[ext_resource type="Script" uid="uid://dk0vape858jd7" path="res://scripts/RabbitMQListener.cs" id="1_0wfyh"]
+[ext_resource type="PackedScene" uid="uid://xiparw0w47vj" path="res://scenes/ur3e.tscn" id="1_o5qli"]
+[ext_resource type="Script" uid="uid://c2qjpfqw0qvvg" path="res://scripts/main.gd" id="1_sugp2"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sgp6g"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_o5qli"]
+sky_material = SubResource("ProceduralSkyMaterial_sgp6g")
+
+[sub_resource type="Environment" id="Environment_0wfyh"]
+background_mode = 2
+sky = SubResource("Sky_o5qli")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_sgp6g"]
+size = Vector2(5, 5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sgp6g"]
+albedo_color = Color(0, 0.4745098, 0, 1)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_sugp2"]
+points = PackedVector3Array(-2.5, 0, -2.5, -2.5, 0, 2.5, 2.5, 0, -2.5, 2.5, 0, 2.5)
+
+[node name="Main" type="Node3D" unique_id=1115617782]
+script = ExtResource("1_sugp2")
+
+[node name="RabbitMQListener" type="Node" parent="." unique_id=314494042]
+script = ExtResource("1_0wfyh")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1772228696]
+environment = SubResource("Environment_0wfyh")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=647031164]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1082150372]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78844714, 1.5970632)
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1211339058]
+mesh = SubResource("PlaneMesh_sgp6g")
+surface_material_override/0 = SubResource("StandardMaterial3D_sgp6g")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Ground" unique_id=592399349]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground/StaticBody3D" unique_id=680671150]
+shape = SubResource("ConvexPolygonShape3D_sugp2")
+
+[node name="UR3e" parent="." unique_id=2097379673 instance=ExtResource("1_o5qli")]

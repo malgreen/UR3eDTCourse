@@ -1,0 +1,173 @@
+[gd_scene format=3 uid="uid://xiparw0w47vj"]
+
+[ext_resource type="Script" uid="uid://d7u4qa0o1pgb" path="res://scripts/ur3e.gd" id="1_2ull1"]
+[ext_resource type="PackedScene" uid="uid://dvvs6qbgs8h8q" path="res://assets/joint_4.glb" id="1_8alix"]
+[ext_resource type="PackedScene" uid="uid://bjhcii02rvi7p" path="res://assets/joint_0.glb" id="1_i2x5v"]
+[ext_resource type="PackedScene" uid="uid://d2g36qftbsfqk" path="res://assets/joint_2.glb" id="1_sw52v"]
+[ext_resource type="PackedScene" uid="uid://pi7dem5psit0" path="res://assets/joint_6.glb" id="1_ve677"]
+[ext_resource type="PackedScene" uid="uid://d01kkdmfuerh8" path="res://assets/joint_5.glb" id="1_wcebl"]
+[ext_resource type="PackedScene" uid="uid://broqujaqha6he" path="res://assets/joint_3.glb" id="1_yjcpb"]
+[ext_resource type="PackedScene" uid="uid://eb1iheocgn5b" path="res://assets/joint_1.glb" id="2_4erh1"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_njts6"]
+top_radius = 0.1
+bottom_radius = 0.128
+height = 0.151
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_wcebl"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_i2x5v"]
+top_radius = 0.1
+bottom_radius = 0.1
+height = 0.4
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sw52v"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.4
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_yjcpb"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.35
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4erh1"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.35
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ve677"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.3
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_8alix"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.28
+
+[node name="UR3e" type="Node3D" unique_id=2097379673]
+script = ExtResource("1_2ull1")
+
+[node name="v2" type="Node3D" parent="." unique_id=12542437]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
+
+[node name="J0" type="Marker3D" parent="v2" unique_id=134107615]
+
+[node name="J0_mesh" parent="v2/J0" unique_id=1659405850 instance=ExtResource("1_i2x5v")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.6380001, -0.06581849, -0.125)
+
+[node name="J1" type="Marker3D" parent="v2/J0" unique_id=13361947]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.19019148, 0)
+
+[node name="J1_label" type="Label3D" parent="v2/J0/J1" unique_id=541064106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0471662e-08, 0.035679698, 0.2395637)
+billboard = 1
+text = "J1"
+
+[node name="J1_mesh" parent="v2/J0/J1" unique_id=1329914328 instance=ExtResource("2_4erh1")]
+transform = Transform3D(1, 0, 0, 0, -4.3711385e-08, -0.99999994, 0, 0.99999994, -4.3711385e-08, -0.3108219, 0.37438253, -0.12332223)
+
+[node name="J2" type="Marker3D" parent="v2/J0/J1" unique_id=741200946]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11651954, -0.23876561)
+
+[node name="J2_label" type="Label3D" parent="v2/J0/J1/J2" unique_id=964790936]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.469054e-09, 0.035679698, -0.21662675)
+billboard = 1
+text = "J2"
+
+[node name="J2_mesh" parent="v2/J0/J1/J2" unique_id=849145154 instance=ExtResource("1_sw52v")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.62075055, 0.31257764, -0.11437036)
+
+[node name="J3" type="Marker3D" parent="v2/J0/J1/J2" unique_id=1313523741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48577493, 0.07472311)
+
+[node name="J3_label" type="Label3D" parent="v2/J0/J1/J2/J3" unique_id=392921007]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4927705e-08, 0.035679698, 0.34150603)
+billboard = 1
+text = "J3"
+
+[node name="J3_mesh" parent="v2/J0/J1/J2/J3" unique_id=932468972 instance=ExtResource("1_yjcpb")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.16875911, -0.023306102, 0.019658975)
+
+[node name="J4" type="Marker3D" parent="v2/J0/J1/J2/J3" unique_id=1316598321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004057884, 0.42755902, -0.095430136)
+
+[node name="J4_label" type="Label3D" parent="v2/J0/J1/J2/J3/J4" unique_id=1305884977]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8626451e-08, 0.017839909, 0.4256083)
+billboard = 1
+text = "J4
+"
+
+[node name="J4_mesh" parent="v2/J0/J1/J2/J3/J4" unique_id=1512366243 instance=ExtResource("1_8alix")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.445, -0.42, -0.063)
+
+[node name="J5" type="Marker3D" parent="v2/J0/J1/J2/J3/J4" unique_id=135493704]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0017371476, 0.08522582, 0.0029102862)
+
+[node name="J5_label" type="Label3D" parent="v2/J0/J1/J2/J3/J4/J5" unique_id=1747531355]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.21775e-09, -0.2599523, -0.16183266)
+billboard = 1
+text = "J5"
+
+[node name="J5_mesh" parent="v2/J0/J1/J2/J3/J4/J5" unique_id=1896485290 instance=ExtResource("1_wcebl")]
+transform = Transform3D(1, 0, 0, 0, -4.3711385e-08, -0.99999994, 0, 0.99999994, -4.3711385e-08, 0.377, -0.588, -0.088)
+
+[node name="J6" type="Marker3D" parent="v2/J0/J1/J2/J3/J4/J5" unique_id=1676078127]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0019339323, 0.087757826, -0.13693327)
+
+[node name="J6_mesh" parent="v2/J0/J1/J2/J3/J4/J5/J6" unique_id=1448666202 instance=ExtResource("1_ve677")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.33299994, -0.867, -0.04982499)
+
+[node name="J4_label" type="Label3D" parent="v2/J0/J1/J2/J3/J4/J5/J6" unique_id=2077984252]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1432137e-09, 0.21535265, 0.07135978)
+billboard = 1
+text = "J6"
+
+[node name="v1" type="Node3D" parent="." unique_id=1199766728]
+visible = false
+
+[node name="J0" type="MeshInstance3D" parent="v1" unique_id=1153028534]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.076, 0)
+mesh = SubResource("CylinderMesh_njts6")
+
+[node name="L0" type="MeshInstance3D" parent="v1/J0" unique_id=1190887224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1777175, 0)
+mesh = SubResource("CylinderMesh_wcebl")
+
+[node name="J1" type="MeshInstance3D" parent="v1/J0" unique_id=807282537]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.13, 0.23079637, 0)
+mesh = SubResource("CylinderMesh_i2x5v")
+
+[node name="L1" type="MeshInstance3D" parent="v1/J0/J1" unique_id=1055419491]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.237, -0.107, 0)
+mesh = SubResource("CylinderMesh_sw52v")
+
+[node name="J2" type="MeshInstance3D" parent="v1/J0/J1" unique_id=1830157894]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.48147166, -0.034620896, 0)
+mesh = SubResource("CylinderMesh_yjcpb")
+
+[node name="L2" type="MeshInstance3D" parent="v1/J0/J1/J2" unique_id=268983694]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.237, 0.1, 0)
+mesh = SubResource("CylinderMesh_sw52v")
+
+[node name="J3" type="MeshInstance3D" parent="v1/J0/J1/J2" unique_id=1214678436]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42778403, -1.4901161e-08, 0)
+mesh = SubResource("CylinderMesh_4erh1")
+
+[node name="J4" type="MeshInstance3D" parent="v1/J0/J1/J2/J3" unique_id=1557770404]
+transform = Transform3D(-4.3711385e-08, -0.99999994, 0, 0.99999994, -4.3711385e-08, 0, 0, 0, 1, 0.07469058, -0.09612289, 0)
+mesh = SubResource("CylinderMesh_ve677")
+
+[node name="J5" type="MeshInstance3D" parent="v1/J0/J1/J2/J3/J4" unique_id=41154809]
+transform = Transform3D(-4.371128e-08, -0.999999, 0, 0.999999, -4.371128e-08, 0, 0, 0, 1, -0.04221371, -0.09663725, 0)
+mesh = SubResource("CylinderMesh_8alix")
+
+[node name="J0_label" type="Label3D" parent="v1/J0" unique_id=2107530072]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5328568, 0, 0)
+visible = false
+billboard = 1
+text = "J0"
