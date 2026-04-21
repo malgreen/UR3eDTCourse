@@ -3,7 +3,7 @@ import requests
 from startup.utils.config import resource_file_path_w_setuptools
 from startup.utils.docker_service_starter import kill_container, start
 
-containerName = "influx-server"
+containerName = "ur3e-influxdb-server"
 
 
 def start_docker_influxdb():
