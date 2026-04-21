@@ -211,4 +211,4 @@ __marimo__/
 *.DS_store
 
 # InfluxDB
-#communication/influxdb
+communication/influxdb/influxdb/engine
