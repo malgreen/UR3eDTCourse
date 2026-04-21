@@ -34,7 +34,7 @@ class SimulationService:
     def __init__(self) -> None:
         # === Logging === #
         self.log = get_service_logger(__name__)
-        # === RabbitMQ === #
+        # === RabbitMQ === # TODO: use config
         try:
             self.log.info("Starting SimulationService...")
             # === fields === #

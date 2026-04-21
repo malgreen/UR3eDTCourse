@@ -45,7 +45,7 @@ class SimpleErrorService:
             self.latest_sim_tcp_pose = []  # format: [x, y, z, r, p, y]
             self.latest_pt_tcp_pose = []  # format: [x, y, z, r, p, y]
             self.max_diff = 0.01  # TODO
-            # === RabbitMQ === #
+            # === RabbitMQ === # TODO: use config
             self.rmq: Rabbitmq = Rabbitmq(
                 ip="localhost",
                 port=5672,
