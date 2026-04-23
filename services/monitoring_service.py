@@ -39,6 +39,9 @@ class MonitoringService:
         self.rmq.subscribe(
             protocol.ROUTING_KEY_STATE, self.on_state_msg_received
         )
+        self.rmq.subscribe(
+            protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE, self.on_error_msg_received
+        )
         self.log.info(f"{__name__} consuming...")
         self.rmq.start_consuming()
 
@@ -75,6 +78,33 @@ class MonitoringService:
         "get data from rappitmq and call write_data to write it to influxdb server"
         # print(f"Received message with body: {body}")
         self.write_data(body)
+
+    def write_error_data(self, body: dict):
+        "Write simple error event to InfluxDB server"
+        now = datetime.now(timezone.utc)
+
+        point = Point("_simple_error_service") \
+            .tag("source", "simple_error_service") \
+            .field(protocol.SimpleErrorMsgKeys.STATUS, bool(body.get(protocol.SimpleErrorMsgKeys.STATUS))) \
+            .time(now)
+
+        actual = body.get(protocol.SimpleErrorMsgKeys.ACTUAL_POSITION) or []
+        simulated = body.get(protocol.SimpleErrorMsgKeys.SIMULATED_POISITION) or []
+        axes = ("x", "y", "z")
+
+        for i, v in enumerate(actual):
+            point.field(f"actual_{axes[i] if i < len(axes) else i}", float(v))
+        for i, v in enumerate(simulated):
+            point.field(f"simulated_{axes[i] if i < len(axes) else i}", float(v))
+        for i in range(min(len(actual), len(simulated), len(axes))):
+            point.field(f"diff_{axes[i]}", float(actual[i]) - float(simulated[i]))
+
+        self.write_api.write(bucket=self.bucket, org=self.client.org, record=point)
+
+    def on_error_msg_received(self, ch, method, properties, body: dict):
+        "Handle simple error messages and write them to InfluxDB"
+        self.log.info(f"Received simple error event: {body}")
+        self.write_error_data(body)
 
 
     def close(self):
