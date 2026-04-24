@@ -24,6 +24,10 @@ public partial class RabbitMQListener : Node
 	[Signal]
 	public delegate void OnMessageEventHandler(string message);
 
+	[Export]
+	private AcceptDialog ErrorDialog;
+
+
 	public override void _Ready()
 	{
 		if (userName != "") {
@@ -48,19 +52,24 @@ public partial class RabbitMQListener : Node
 			GD.Print("Port not set, using default: 5672");
 		}
 
-		connection = factory.CreateConnection();
-		channel = connection.CreateModel();
-		
-		localQueue = channel.QueueDeclare(autoDelete: true, exclusive: true); 
-		channel.QueueBind(queue: localQueue, exchange: exchangeName, routingKey: ROUTING_KEY_STATE);
-		ReceiveMessage();
-		
-		if (!connection.IsOpen) {
-			GD.Print("Error! Could not connect!");
-		}
-		else {
+		try {
+			connection = factory.CreateConnection();
+			channel = connection.CreateModel();
+			
+			localQueue = channel.QueueDeclare(autoDelete: true, exclusive: true); 
+			channel.QueueBind(queue: localQueue, exchange: exchangeName, routingKey: ROUTING_KEY_STATE);
+			ReceiveMessage();
+			if (!connection.IsOpen) {
+				throw new Exception("RabbitMQ connection is not open!");
+			}
 			GD.Print("Connection established");
+		} catch (Exception e) {
+			GD.PrintErr(e);
+			ErrorDialog.Title = "RabbitMQ Error";
+			ErrorDialog.DialogText = e.Message;
+			ErrorDialog.Show();
 		}
+		
 	}
 
 	public override void _Process(double delta) {

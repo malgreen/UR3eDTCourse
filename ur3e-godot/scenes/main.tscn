@@ -4,51 +4,146 @@
 [ext_resource type="PackedScene" uid="uid://xiparw0w47vj" path="res://scenes/ur3e.tscn" id="1_o5qli"]
 [ext_resource type="Script" uid="uid://c2qjpfqw0qvvg" path="res://scripts/main.gd" id="1_sugp2"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sgp6g"]
-sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sugp2"]
 
-[sub_resource type="Sky" id="Sky_o5qli"]
-sky_material = SubResource("ProceduralSkyMaterial_sgp6g")
+[sub_resource type="Sky" id="Sky_jyhfs"]
+sky_material = SubResource("ProceduralSkyMaterial_sugp2")
 
-[sub_resource type="Environment" id="Environment_0wfyh"]
+[sub_resource type="Environment" id="Environment_tbgi4"]
 background_mode = 2
-sky = SubResource("Sky_o5qli")
-tonemap_mode = 2
-glow_enabled = true
+sky = SubResource("Sky_jyhfs")
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_sgp6g"]
-size = Vector2(5, 5)
+[sub_resource type="BoxMesh" id="BoxMesh_sugp2"]
+size = Vector3(50, 5, 50)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sgp6g"]
-albedo_color = Color(0, 0.4745098, 0, 1)
-
-[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_sugp2"]
-points = PackedVector3Array(-2.5, 0, -2.5, -2.5, 0, 2.5, 2.5, 0, -2.5, 2.5, 0, 2.5)
+albedo_color = Color(1.6845763e-07, 0.41123635, 9.62615e-08, 1)
 
 [node name="Main" type="Node3D" unique_id=1115617782]
 script = ExtResource("1_sugp2")
 
-[node name="RabbitMQListener" type="Node" parent="." unique_id=314494042]
+[node name="RabbitMQListener" type="Node" parent="." unique_id=314494042 node_paths=PackedStringArray("ErrorDialog")]
 script = ExtResource("1_0wfyh")
+ErrorDialog = NodePath("AcceptDialog")
+
+[node name="AcceptDialog" type="AcceptDialog" parent="RabbitMQListener" unique_id=1946414311]
+oversampling_override = 1.0
+initial_position = 1
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1772228696]
-environment = SubResource("Environment_0wfyh")
+environment = SubResource("Environment_tbgi4")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=647031164]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+transform = Transform3D(0.2587819, 0.81171227, 0.52359813, -0.864758, -0.046833623, 0.5000002, 0.4303783, -0.5821766, 0.68981504, 0, 0, 0)
 shadow_enabled = true
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1082150372]
+[node name="MainCameraPerspective" type="Camera3D" parent="." unique_id=1082150372]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5231929, 0.78844714, 1.5970632)
+current = true
+
+[node name="Control" type="Control" parent="." unique_id=524708192]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="MainOrthoContainer" type="SubViewportContainer" parent="Control" unique_id=627115121]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -1024.0
+offset_bottom = 512.0
+grow_horizontal = 0
+size_flags_vertical = 3
+stretch = true
+
+[node name="MainOrthoLabel" type="Label" parent="Control/MainOrthoContainer" unique_id=878654436]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Side View (Orthogonal)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MainViewportOrtho" type="SubViewport" parent="Control/MainOrthoContainer" unique_id=20302845]
+handle_input_locally = false
+size = Vector2i(1024, 512)
+render_target_update_mode = 4
+
+[node name="MainCameraOrtho" type="Camera3D" parent="Control/MainOrthoContainer/MainViewportOrtho" unique_id=1727253895]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78844714, 1.5970632)
+projection = 1
+size = 2.0
+
+[node name="TopDownPerspectiveContainer" type="SubViewportContainer" parent="Control" unique_id=285208137]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -1024.0
+offset_top = -256.0
+offset_bottom = 256.0
+grow_horizontal = 0
+grow_vertical = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="TopDownPerspectiveLabel" type="Label" parent="Control/TopDownPerspectiveContainer" unique_id=1330859329]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Top-Down View (Perspective)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TopDownViewportPerspective" type="SubViewport" parent="Control/TopDownPerspectiveContainer" unique_id=1389151479]
+handle_input_locally = false
+size = Vector2i(1024, 512)
+render_target_update_mode = 4
+
+[node name="TopDownCameraPerspective" type="Camera3D" parent="Control/TopDownPerspectiveContainer/TopDownViewportPerspective" unique_id=16666402]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 1.5, 0)
+size = 1.5
+
+[node name="TopDownOrthoContainer" type="SubViewportContainer" parent="Control" unique_id=1148413346]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -1024.0
+offset_top = -512.0
+grow_horizontal = 0
+grow_vertical = 0
+size_flags_vertical = 3
+stretch = true
+
+[node name="TopDownOrthoLabel" type="Label" parent="Control/TopDownOrthoContainer" unique_id=2142798705]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Top-Down View (Orthogonal)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TopDownViewportOrtho" type="SubViewport" parent="Control/TopDownOrthoContainer" unique_id=2119395015]
+handle_input_locally = false
+size = Vector2i(1024, 512)
+render_target_update_mode = 4
+
+[node name="TopDownCameraOrtho" type="Camera3D" parent="Control/TopDownOrthoContainer/TopDownViewportOrtho" unique_id=1020363844]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 2, 0)
+projection = 1
+size = 1.5
 
 [node name="Ground" type="MeshInstance3D" parent="." unique_id=1211339058]
-mesh = SubResource("PlaneMesh_sgp6g")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.5, 0)
+mesh = SubResource("BoxMesh_sugp2")
 surface_material_override/0 = SubResource("StandardMaterial3D_sgp6g")
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Ground" unique_id=592399349]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground/StaticBody3D" unique_id=680671150]
-shape = SubResource("ConvexPolygonShape3D_sugp2")
 
 [node name="UR3e" parent="." unique_id=2097379673 instance=ExtResource("1_o5qli")]
