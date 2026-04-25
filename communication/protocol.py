@@ -17,6 +17,7 @@ class SimpleErrorMsgKeys:
     STATUS = "status"
     ACTUAL_POSITION = "actual_position"
     SIMULATED_POISITION = "simulated_position"
+    POSITION_DIFFERENCE = "position_difference"
 
 
 class SimCtrlMsgKeys:

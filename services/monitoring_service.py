@@ -1,4 +1,4 @@
-"""Monitoring Service for handling InfluxDB operations"""
+import traceback
 
 from datetime import datetime, timezone
 
@@ -12,38 +12,45 @@ from .utils import get_service_logger
 
 
 class MonitoringService:
+    """Monitoring Service for handling InfluxDB operations"""
     def __init__(self) -> None:
         self.log = get_service_logger(__name__)
-        # self.log = logging.basicConfig()
-        config = load_config_w_setuptools("startup.conf")
+        try:
+            config = load_config_w_setuptools("startup.conf")
 
-        # === InfluxDB === #
-        self.client = InfluxDBClient(url=config["influxdb.url"], token=config["influxdb.token"], org=config["influxdb.org"])
-        self.bucket = config["influxdb.bucket"]
-        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+            # === InfluxDB === #
+            self.client = InfluxDBClient(url=config["influxdb.url"], token=config["influxdb.token"], org=config["influxdb.org"])
+            self.bucket = config["influxdb.bucket"]
+            self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
-        # === RabbitMQ === #
-        self.rmq: Rabbitmq = Rabbitmq(
-            ip=config["rabbitmq.ip"],
-            port=config["rabbitmq.port"],
-            username=config["rabbitmq.username"],
-            password=config["rabbitmq.password"],
-            vhost=config["rabbitmq.vhost"],
-            exchange=config["rabbitmq.exchange"],
-            type="topic",
-        )
-        self.rmq.connect_to_server()
-        self.log.info("Connected to RabbitMQ")
-        
-        # === Callbacks === #
-        self.rmq.subscribe(
-            protocol.ROUTING_KEY_STATE, self.on_state_msg_received
-        )
-        self.rmq.subscribe(
-            protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE, self.on_error_msg_received
-        )
-        self.log.info(f"{__name__} consuming...")
-        self.rmq.start_consuming()
+            # === RabbitMQ === #
+            self.rmq: Rabbitmq = Rabbitmq(
+                ip=config["rabbitmq.ip"],
+                port=config["rabbitmq.port"],
+                username=config["rabbitmq.username"],
+                password=config["rabbitmq.password"],
+                vhost=config["rabbitmq.vhost"],
+                exchange=config["rabbitmq.exchange"],
+                type="topic",
+            )
+            self.rmq.connect_to_server()
+            self.log.info("Connected to RabbitMQ")
+            
+            # === Callbacks === #
+            self.rmq.subscribe(
+                protocol.ROUTING_KEY_STATE, self.on_state_msg_received
+            )
+            self.rmq.subscribe(
+                protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE, self.on_error_msg_received
+            )
+            self.log.info(f"{__name__} consuming...")
+            self.rmq.start_consuming()
+        except KeyboardInterrupt:
+            self.log.info("Shutting down MonitoringService...")
+        except Exception:
+            self.log.error(traceback.format_exc())
+        finally:
+            self.log.info("MonitoringService has shut down")
 
     def write_data(self, body: dict):
         "Write data to InfluxDB server"
@@ -51,9 +58,6 @@ class MonitoringService:
         now = datetime.now(timezone.utc)
 
         # Create a point with a measurement, tag, field, and a timestamp
-
-
-
         point = Point("_ur3e_pt_state") \
             .tag("source", "monitoring_service") \
             .field(protocol.RobotArmStateKeys.ROBOT_MODE, body.get(protocol.RobotArmStateKeys.ROBOT_MODE)) \
@@ -63,13 +67,13 @@ class MonitoringService:
             .time(now)
         
         for i, v in enumerate(body.get(protocol.RobotArmStateKeys.Q_ACTUAL)):
-            point.field(f"q_actual_{i}", float(v))
+            point.field(f"q_actual_{i}", v)
         for i, v in enumerate(body.get(protocol.RobotArmStateKeys.QD_ACTUAL)):
-            point.field(f"qd_actual_{i}", float(v))
+            point.field(f"qd_actual_{i}", v)
         for i, v in enumerate(body.get(protocol.RobotArmStateKeys.Q_TARGET)):
-            point.field(f"q_target_{i}", float(v))
+            point.field(f"q_target_{i}", v)
         for i, v in enumerate(body.get(protocol.RobotArmStateKeys.TCP_POSE)):
-            point.field(f"tcp_pose_{i}", float(v))
+            point.field(f"tcp_pose_{i}", v)
 
         # Write the point to the bucket
         self.write_api.write(bucket=self.bucket, org=self.client.org, record=point)
@@ -85,19 +89,22 @@ class MonitoringService:
 
         point = Point("_simple_error_service") \
             .tag("source", "simple_error_service") \
-            .field(protocol.SimpleErrorMsgKeys.STATUS, bool(body.get(protocol.SimpleErrorMsgKeys.STATUS))) \
+            .field(protocol.SimpleErrorMsgKeys.STATUS, body.get(protocol.SimpleErrorMsgKeys.STATUS)) \
             .time(now)
 
         actual = body.get(protocol.SimpleErrorMsgKeys.ACTUAL_POSITION) or []
         simulated = body.get(protocol.SimpleErrorMsgKeys.SIMULATED_POISITION) or []
+        diff = body.get(protocol.SimpleErrorMsgKeys.POSITION_DIFFERENCE) or []
         axes = ("x", "y", "z")
 
         for i, v in enumerate(actual):
-            point.field(f"actual_{axes[i] if i < len(axes) else i}", float(v))
+            point.field(f"actual_{axes[i] if i < len(axes) else i}", v)
         for i, v in enumerate(simulated):
-            point.field(f"simulated_{axes[i] if i < len(axes) else i}", float(v))
-        for i in range(min(len(actual), len(simulated), len(axes))):
-            point.field(f"diff_{axes[i]}", float(actual[i]) - float(simulated[i]))
+            point.field(f"simulated_{axes[i] if i < len(axes) else i}", v)
+        for i, v in enumerate(diff):
+            point.field(f"diff_{axes[i]}", v)
+            
+        self.log.info(point)
 
         self.write_api.write(bucket=self.bucket, org=self.client.org, record=point)
 
