@@ -3,20 +3,12 @@ extends Node3D
 @onready var ur3e: UR3e = $UR3e
 @onready var rabbit_mq_listener: Node = $RabbitMQListener
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	rabbit_mq_listener.connect("OnMessage", _on_message_received)
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
-
-
 func _on_message_received(msg: String):
 	var dict: Dictionary = JSON.parse_string(msg)
-	print("MESSAGE RCV")
-	#print(msg)
 	if dict.get("q_actual") != null:
 		ur3e.rotate_joints(dict["q_actual"])
 		

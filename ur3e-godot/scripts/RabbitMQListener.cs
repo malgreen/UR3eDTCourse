@@ -1,9 +1,9 @@
-using Godot;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Godot;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 public partial class RabbitMQListener : Node
 {
@@ -13,7 +13,7 @@ public partial class RabbitMQListener : Node
 
 	private string exchangeName = "UR3E_AMQP";
 	private string ROUTING_KEY_STATE = "robotarm.pt.state";
-	private string localQueue;
+	private string queue;
 	private List<string> messages = new();
 
 	private string hostName = "localhost";
@@ -30,65 +30,75 @@ public partial class RabbitMQListener : Node
 
 	public override void _Ready()
 	{
-		if (userName != "") {
+		if (userName != "")
+		{
 			factory.UserName = userName;
 			GD.Print("Host name set to: " + userName);
 		}
 
-		if (hostName != "") {
+		if (hostName != "")
+		{
 			GD.Print("Host name set to: " + hostName);
-		} 
+		}
 
-		if (password != "") {
+		if (password != "")
+		{
 			factory.Password = password;
 			GD.Print("Password set to: " + password);
-		} 
+		}
 
-		if (port != "") {
+		if (port != "")
+		{
 			factory.Port = port.ToInt();
 			GD.Print("Port set to: " + port);
-		} else {
+		}
+		else
+		{
 			factory.Port = 5672;
 			GD.Print("Port not set, using default: 5672");
 		}
 
-		try {
+		try
+		{
 			connection = factory.CreateConnection();
 			channel = connection.CreateModel();
-			
-			localQueue = channel.QueueDeclare(autoDelete: true, exclusive: true); 
-			channel.QueueBind(queue: localQueue, exchange: exchangeName, routingKey: ROUTING_KEY_STATE);
-			ReceiveMessage();
-			if (!connection.IsOpen) {
+			queue = channel.QueueDeclare(autoDelete: true, exclusive: true);
+
+			channel.QueueBind(queue: queue, exchange: exchangeName, routingKey: ROUTING_KEY_STATE);
+
+			var consumer = new EventingBasicConsumer(channel);
+			consumer.Received += (model, ea) =>
+			{
+				var body = ea.Body.ToArray();
+				var message = Encoding.ASCII.GetString(body);
+				messages.Add(message);
+			};
+
+			GD.Print("Waiting for RabbitMQ messages...");
+			channel.BasicConsume(queue: queue, autoAck: true, consumer: consumer);
+
+			if (!connection.IsOpen)
+			{
 				throw new Exception("RabbitMQ connection is not open!");
 			}
 			GD.Print("Connection established");
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			GD.PrintErr(e);
 			ErrorDialog.Title = "RabbitMQ Error";
 			ErrorDialog.DialogText = e.Message;
 			ErrorDialog.Show();
 		}
-		
+
 	}
 
-	public override void _Process(double delta) {
-		for (int i = 0; i < messages.Count; i++) {
+	public override void _Process(double delta)
+	{
+		for (int i = 0; i < messages.Count; i++)
+		{
 			EmitSignal(SignalName.OnMessage, messages[i]);
 		}
 		messages.Clear();
-	}
-
-	private void ReceiveMessage() {
-		GD.Print("Waiting for messages");
-		var consumer = new EventingBasicConsumer(channel);
-
-		consumer.Received += (model, ea) => {
-			var body = ea.Body.ToArray();
-			var message = Encoding.ASCII.GetString(body);
-			messages.Add(message);
-		};
-
-		channel.BasicConsume(queue: localQueue, autoAck: true, consumer: consumer);
 	}
 }
