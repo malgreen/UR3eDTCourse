@@ -38,6 +38,7 @@ class MonitoringService:
                 for _ in range(6)
             ]
 
+            self.current_max_speed = 60.0
 
             # === RabbitMQ === #
             self.rmq: Rabbitmq = Rabbitmq(
@@ -58,6 +59,9 @@ class MonitoringService:
             )
             self.rmq.subscribe(
                 protocol.ROUTING_KEY_SIMPLE_ERROR_SERVICE, self.on_error_msg_received
+            )
+            self.rmq.subscribe(
+                protocol.ROUTING_KEY_CTRL, self.on_ctrl_msg_received
             )
             self.log.info(f"{__name__} consuming...")
             self.rmq.start_consuming()
@@ -95,10 +99,11 @@ class MonitoringService:
         self.write_api.write(bucket=self.bucket, org=self.client.org, record=point)
 
         qd_actual = body.get(protocol.RobotArmStateKeys.QD_ACTUAL) or []
-        max_speed = body.get(protocol.RobotArmStateKeys.JOINT_MAX_SPEED)
+        
 
-        if not qd_actual or max_speed is None:
+        if not qd_actual:
             return
+        max_speed = self.current_max_speed
 
         self.speed_vars.set("max_speed", max_speed)
 
@@ -145,6 +150,13 @@ class MonitoringService:
 
         if len(records) > 0:
             self.write_api.write(bucket=self.bucket, org=self.client.org, record=records)
+
+
+    def on_ctrl_msg_received(self, ch, method, properties, body):
+        max_vel = body.get(protocol.CtrlMsgKeys.MAX_VELOCITY)
+        if max_vel is not None:
+            self.current_max_speed = max_vel
+            self.log.info(f"Updated max_speed from CTRL: {max_vel}")
 
 
     def on_state_msg_received(self, ch, method, properties, body: dict):
