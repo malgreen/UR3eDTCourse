@@ -12,21 +12,19 @@ from .utils import get_service_logger
 class SimulationService:
     """
     The SimulationService class provides simulation functionality to the digital twin.
-    It takes control messages resembling the messages for the mockup:
+    It takes messages that describe which simulation to perform, and the data for it. e.g.:
     ```py
     ctrl: dict = {
-        protocol.SimCtrlMsgKeys.TYPE: protocol.CtrlMsgFields.LOAD_PROGRAM,
-        protocol.SimCtrlMsgKeys.JOINT_POSITIONS: [0, np.pi/2, 0, 0, 0, 0]
+        protocol.SimMsgKeys.TYPE: protocol.SimMsgFields.POSITION,
+        protocol.SimMsgKeys.ACTUAL_JOINT_POSITIONS: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        protocol.SimMsgKeys.TARGET_JOINT_POSITIONS: [0.0, -np.pi/2, 0.0, -np.pi/2, 0.0, 0.0]
     }
     ```
-    *NOTE*: it does not require a `START` message. It simulates when receiving `LOAD_PROGRAM`.
 
-    After a simulation pass, it publishes the state. The message structure for the state
-    resembles the structure of the mockup state messages:
+    After a simulation pass, it publishes the result, i.e.:
     ```py
     state: dict = {
-        protocol.RobotArmStateKeys.Q_ACTUAL: [0, 0, 0, 0, 0, 0],
-        protocol.RobotArmStateKeys.TCP_POSE: [x, y, z, r, p, y]
+        protocol.SimMsgKeys.POSITION_RESULT: [x, y, z, r, p, y]
     }
     ```
     """
@@ -34,20 +32,8 @@ class SimulationService:
     def __init__(self) -> None:
         # === Logging === #
         self.log = get_service_logger(__name__)
-        # === RabbitMQ === # TODO: use config
         try:
             self.log.info("Starting SimulationService...")
-            # === fields === #
-            self.links: list[rtb.RevoluteDH] = [
-                rtb.RevoluteDH(d=0.15185, a=0, alpha=np.pi / 2),
-                rtb.RevoluteDH(d=0, a=-0.24355, alpha=0),
-                rtb.RevoluteDH(d=0, a=-0.2132, alpha=0),
-                rtb.RevoluteDH(d=0.13105, a=0, alpha=np.pi / 2),
-                rtb.RevoluteDH(d=0.08535, a=0, alpha=-np.pi / 2),
-                rtb.RevoluteDH(d=0.0921, a=0, alpha=0),
-            ]
-            self.model: rtb.DHRobot = rtb.DHRobot(name="UR3e Model", links=self.links)
-            self.head: SE3
             # === RabbitMQ === #
             self.rmq: Rabbitmq = Rabbitmq(
                 ip="localhost",
@@ -74,34 +60,68 @@ class SimulationService:
             self.log.info("SimulationService has shut down")
 
     def on_sim_ctrl_message_received(self, channel, method, properties, body) -> None:
-        try:
+        try: 
             self.log.info(
                 f"Received SIM CTRL message with body: {json.dumps(body, indent=4)}"
             )
-            if (
-                body.get(protocol.SimCtrlMsgKeys.TYPE)
-                == protocol.CtrlMsgFields.LOAD_PROGRAM
-            ):
-                target_joint_positions = body.get(
-                    protocol.SimCtrlMsgKeys.JOINT_POSITIONS
-                )
-                self.model.q = target_joint_positions
-                self.head = self.model.fkine(target_joint_positions)
+            type = body.get(protocol.SimMsgKeys.TYPE)
+            actual_joint_positions = body.get(protocol.SimMsgKeys.ACTUAL_JOINT_POSITIONS)
+            target_joint_positions = body.get(protocol.SimMsgKeys.TARGET_JOINT_POSITIONS)
+
+            if type == protocol.SimMsgFields.POSITION:
+                result = self.simulate_tcp_position(actual_joint_positions, target_joint_positions)
                 self.log.info("Sending SIM STATE message")
                 self.rmq.send_message(
                     protocol.ROUTING_KEY_SIM_STATE,
                     {
-                        protocol.RobotArmStateKeys.Q_ACTUAL: self.model.q.tolist(),
-                        protocol.RobotArmStateKeys.TCP_POSE: [
-                            self.head.x,
-                            self.head.y,
-                            self.head.z,
-                        ]
-                        + self.head.rpy().tolist(),
+                        protocol.SimMsgKeys.POSITION_RESULT: result
                     },
                 )
+            elif type == protocol.SimMsgFields.TRAJECTORY:
+                steps = body.get(protocol.SimMsgKeys.TRAJECTORY_STEPS)
+                result = self.simulate_trajectory(steps, actual_joint_positions, target_joint_positions)
+                self.rmq.send_message(
+                    protocol.ROUTING_KEY_SIM_STATE,
+                    {
+                        protocol.SimMsgKeys.TRAJECTORY_RESULT: result
+                    },
+                )
+
         except Exception:
             self.log.error(traceback.format_exc())
+    
+    def build_model(self) -> rtb.DHRobot:
+        links: list[rtb.RevoluteDH] = [
+                rtb.RevoluteDH(d=0.15185, a=0, alpha=np.pi / 2),
+                rtb.RevoluteDH(d=0, a=-0.24355, alpha=0),
+                rtb.RevoluteDH(d=0, a=-0.2132, alpha=0),
+                rtb.RevoluteDH(d=0.13105, a=0, alpha=np.pi / 2),
+                rtb.RevoluteDH(d=0.08535, a=0, alpha=-np.pi / 2),
+                rtb.RevoluteDH(d=0.0921, a=0, alpha=0),
+            ]
+        # model: rtb.DHRobot = 
+        return rtb.DHRobot(name="UR3e Model", links=links)
+
+
+    def simulate_tcp_position(self, q_actual: list, q_target: list) -> list:
+        """
+        Simulates position of TCP using Forward Kinematics. 
+        Returns the TCP pose as a [x,y,z,r,p,y] list
+        """
+        model = self.build_model()
+        model.q = q_actual
+        head = model.fkine(q_target)
+
+        return [head.x, head.y, head.z] + head.rpy().tolist()
+    
+
+    def simulate_trajectory(self, steps: int, q_actual: list, q_target: list, ) -> list[list]:
+        """
+        Simulates robotic arm movement trajectory.
+        Returns NxM array, where N is the number of timesteps, and M is the amount of joints.
+        """
+        trajectory = rtb.jtraj(q_actual, q_target, steps)
+        return trajectory.q
 
 
 if __name__ == "__main__":

@@ -20,9 +20,20 @@ class SimpleErrorMsgKeys:
     POSITION_DIFFERENCE = "position_difference"
 
 
-class SimCtrlMsgKeys:
+# used both for requests and responses
+class SimMsgKeys:
+    # request types
     TYPE = "type"
-    JOINT_POSITIONS = "joint_positions"
+    ACTUAL_JOINT_POSITIONS = "actual_joint_positions"
+    TARGET_JOINT_POSITIONS = "target_joint_positions"
+    TRAJECTORY_STEPS = "trajectory_steps"
+    # result
+    POSITION_RESULT = "position_result"
+    TRAJECTORY_RESULT = "trajectory_result"
+
+class SimMsgFields:
+    POSITION = "position"
+    TRAJECTORY = "trajectory"
 
 
 class CtrlMsgFields:

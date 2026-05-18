@@ -41,10 +41,11 @@ class SimpleErrorService:
             self.log.info("Starting SimpleErrorService...")
             # === fields === #
             self.state: SimpleErrorServiceState = SimpleErrorServiceState.WAIT_FOR_LOAD
+            self.actual_joint_positions = []
             self.loaded_joint_positions = []
             self.latest_sim_tcp_pose = []  # format: [x, y, z, r, p, y]
             self.latest_pt_tcp_pose = []  # format: [x, y, z, r, p, y]
-            self.max_diff = 0.1  # TODO
+            self.max_diff = 0.05  # TODO
             # === RabbitMQ === # TODO: use config
             self.rmq: Rabbitmq = Rabbitmq(
                 ip="localhost",
@@ -84,10 +85,7 @@ class SimpleErrorService:
 
             if (
                 ctrl_msg_type == protocol.CtrlMsgFields.LOAD_PROGRAM
-                and (
-                    self.state == SimpleErrorServiceState.WAIT_FOR_LOAD
-                    or self.state == SimpleErrorServiceState.WAIT_FOR_PLAY
-                )
+                and (self.state == SimpleErrorServiceState.WAIT_FOR_LOAD or self.state == SimpleErrorServiceState.WAIT_FOR_PLAY)
             ):  # if we are waiting for a LOAD_PROGRAM or PLAY: set class field to the request JOINT_POSITION
                 self.loaded_joint_positions = body.get(
                     protocol.CtrlMsgKeys.JOINT_POSITIONS
@@ -104,8 +102,9 @@ class SimpleErrorService:
                 self.rmq.send_message(
                     protocol.ROUTING_KEY_SIM_CTRL,
                     {
-                        protocol.CtrlMsgKeys.TYPE: protocol.CtrlMsgFields.LOAD_PROGRAM,
-                        protocol.CtrlMsgKeys.JOINT_POSITIONS: self.loaded_joint_positions,
+                        protocol.SimMsgKeys.TYPE: protocol.SimMsgFields.POSITION,
+                        protocol.SimMsgKeys.ACTUAL_JOINT_POSITIONS: self.actual_joint_positions,
+                        protocol.SimMsgKeys.TARGET_JOINT_POSITIONS: self.loaded_joint_positions,
                     },
                 )
                 self.log.info("Sent SIM CTRL message")
@@ -116,13 +115,15 @@ class SimpleErrorService:
 
     def on_pt_state_message_received(self, channel, method, properties, body) -> None:
         try:
-            if self.state != SimpleErrorServiceState.WAIT_FOR_PT:
-                return  # we only care about PT state if SIM is finished
 
             if (
                 body.get(protocol.RobotArmStateKeys.ROBOT_MODE)
                 == protocol.RobotMode.ROBOT_MODE_RUNNING
             ):  # we only care about PT state when it has finished moving
+                return
+
+            if self.state != SimpleErrorServiceState.WAIT_FOR_PT:
+                self.actual_joint_positions = body.get(protocol.RobotArmStateKeys.Q_ACTUAL)
                 return
 
             self.latest_pt_tcp_pose = body.get(protocol.RobotArmStateKeys.TCP_POSE)
@@ -164,7 +165,7 @@ class SimpleErrorService:
         try:
             if self.state != SimpleErrorServiceState.WAIT_FOR_SIM:
                 return  # we only care about the sim state if we are currently waiting for it
-            self.latest_sim_tcp_pose = body.get(protocol.RobotArmStateKeys.TCP_POSE)
+            self.latest_sim_tcp_pose = body.get(protocol.SimMsgKeys.POSITION_RESULT)
             self.state = SimpleErrorServiceState.WAIT_FOR_PT
             self.log.info(f"Handled SIM STATE message, setting state to {self.state}")
         except Exception:
