@@ -23,7 +23,7 @@ def main():
     # --- Step 1: LOAD PROGRAM ---
     print("Sending LOAD_PROGRAM...")
     rmq.send_message(
-        routing_key=protocol.ROUTING_KEY_CTRL,   # ✅ IMPORTANT
+        routing_key=protocol.ROUTING_KEY_CTRL,
         message={
             protocol.CtrlMsgKeys.TYPE: protocol.CtrlMsgFields.LOAD_PROGRAM,
             protocol.CtrlMsgKeys.JOINT_POSITIONS: [[
@@ -42,7 +42,7 @@ def main():
     # --- Step 2: PLAY ---
     print("Sending PLAY...")
     rmq.send_message(
-        routing_key=protocol.ROUTING_KEY_CTRL,   # ✅ IMPORTANT
+        routing_key=protocol.ROUTING_KEY_CTRL,
         message={
             protocol.CtrlMsgKeys.TYPE: protocol.CtrlMsgFields.PLAY,
         },
