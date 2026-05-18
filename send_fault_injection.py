@@ -52,8 +52,8 @@ def main():
         message={
             protocol.CtrlMsgKeys.TYPE: protocol.CtrlMsgFields.INJECT_FAULT,
             protocol.CtrlMsgKeys.FAULT_TYPE: protocol.FaultTypes.STUCK_JOINT,
-            protocol.CtrlMsgKeys.JOINTS: [1, 2, 3],   # 🔥 multiple joints
-            protocol.CtrlMsgKeys.DURATION: 10         # 🔥 longer duration
+            protocol.CtrlMsgKeys.JOINTS: [1, 2, 3],   # multiple joints
+            protocol.CtrlMsgKeys.DURATION: 10         # longer duration
         },
     )
 
