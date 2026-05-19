@@ -68,11 +68,11 @@ ur3e_model = rtb.DHRobot(
 
 # Starting the Configuration
 
-NUM_SAMPLES = 100
-SAFE_Z_THRESHOLD = 0.075   # We set it as half of d_1, i.e., base link length, (or d_0 in UR3e 
-# pircture from their wibsite), Which is just an approximation of bulk/diameter of the links and 
-# joints, which might collide with the ground, being aware of the fact that the bulkniess of the 
-# joints and links decreases as we move away from the base, making the threshold only more secure. 
+NUM_SAMPLES = 1000
+SAFE_Z_THRESHOLD = 0.075   # We set it as half of the first link's length, i.e., base link length, 
+# (or d_0 in UR3e pircture from their wibsite), Which is just an approximation of bulk/diameter of 
+# the links and joints, which might collide with the ground, being aware of the fact that the bulkniess 
+# of the joints and links decreases as we move away from the base, making the threshold only more secure. 
 
 SETTLE_TIME = 0.5
 OUTPUT_FILE = "1_dataset.csv"
