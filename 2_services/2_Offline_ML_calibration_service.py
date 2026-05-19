@@ -48,7 +48,6 @@ TARGET_COLUMNS = [
 ]
 
 
-TARGET_SCALE = 1e9
 N_EPOCHS = 1000
 BATCH_SIZE = 4
 
@@ -94,7 +93,6 @@ x_scaler = StandardScaler()
 X_train = x_scaler.fit_transform(X_train)
 X_val = x_scaler.transform(X_val)
 X_test = x_scaler.transform(X_test)
-X_all = x_scaler.transform(X)
 
 
 
@@ -192,21 +190,6 @@ print(f"R2  : {test_r2:.6f}")
 print(f"MSE : {test_loss:.6f}")
 
 
-
-# Back to the original radians
-
-y_test_rad = y_scaler.inverse_transform(y_test)
-y_pred_rad = y_scaler.inverse_transform(y_test_pred)
-
-test_mse_rad = mean_squared_error(y_test_rad, y_pred_rad)
-
-mean_y_test_rad = np.mean(y_test_rad)
-mean_y_pred_rad = np.mean(y_pred_rad)
-
-print(f"\nTest MSE (radians): {test_mse_rad:.4e}")
-print(f"\nPredicted Test Mean (radians): {mean_y_pred_rad:.4e}")
-print(f"\nActual Test Mean (radians): {mean_y_test_rad:.4e}")
-print("Test's R2 score:", test_r2)
 
 
 
