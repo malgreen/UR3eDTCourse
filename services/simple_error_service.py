@@ -165,7 +165,10 @@ class SimpleErrorService:
         try:
             if self.state != SimpleErrorServiceState.WAIT_FOR_SIM:
                 return  # we only care about the sim state if we are currently waiting for it
-            self.latest_sim_tcp_pose = body.get(protocol.SimMsgKeys.POSITION_RESULT)
+            sim_result = body.get(protocol.SimMsgKeys.POSITION_RESULT, None)
+            if sim_result is None:
+                return # this means that it was a different simulation type
+            self.latest_sim_tcp_pose = sim_result
             self.state = SimpleErrorServiceState.WAIT_FOR_PT
             self.log.info(f"Handled SIM STATE message, setting state to {self.state}")
         except Exception:

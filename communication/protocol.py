@@ -10,8 +10,11 @@ ROUTING_KEY_SIM_STATE = "service.simulation.state"
 ROUTING_KEY_SIM_CTRL = "service.simulation.ctrl"
 
 ROUTING_KEY_SIMPLE_ERROR_SERVICE = "service.error.simple"
+ROUTING_KEY_CONTINUOUS_ERROR_SERVICE = "service.error.continuous"
+
 
 ### MESSAGES
+
 
 class SimpleErrorMsgKeys:
     STATUS = "status"
@@ -20,8 +23,13 @@ class SimpleErrorMsgKeys:
     POSITION_DIFFERENCE = "position_difference"
 
 
-# used both for requests and responses
-class SimMsgKeys:
+class ContinuousErrorMsgKeys:
+    Q_ACTUAL = "q_actual"
+    Q_SIMULATED = "q_simulated"
+    Q_DISTANCE = "q_distance"
+
+
+class SimMsgKeys:  # used both for requests and responses
     # request types
     TYPE = "type"
     ACTUAL_JOINT_POSITIONS = "actual_joint_positions"
@@ -30,6 +38,7 @@ class SimMsgKeys:
     # result
     POSITION_RESULT = "position_result"
     TRAJECTORY_RESULT = "trajectory_result"
+
 
 class SimMsgFields:
     POSITION = "position"

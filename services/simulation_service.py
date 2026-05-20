@@ -70,7 +70,7 @@ class SimulationService:
 
             if type == protocol.SimMsgFields.POSITION:
                 result = self.simulate_tcp_position(actual_joint_positions, target_joint_positions)
-                self.log.info("Sending SIM STATE message")
+                self.log.info("Sending SIM STATE message with POSITION_RESULT")
                 self.rmq.send_message(
                     protocol.ROUTING_KEY_SIM_STATE,
                     {
@@ -80,6 +80,7 @@ class SimulationService:
             elif type == protocol.SimMsgFields.TRAJECTORY:
                 steps = body.get(protocol.SimMsgKeys.TRAJECTORY_STEPS)
                 result = self.simulate_trajectory(steps, actual_joint_positions, target_joint_positions)
+                self.log.info("Sending SIM STATE message with TRAJECTORY_RESULT")
                 self.rmq.send_message(
                     protocol.ROUTING_KEY_SIM_STATE,
                     {
@@ -99,7 +100,6 @@ class SimulationService:
                 rtb.RevoluteDH(d=0.08535, a=0, alpha=-np.pi / 2),
                 rtb.RevoluteDH(d=0.0921, a=0, alpha=0),
             ]
-        # model: rtb.DHRobot = 
         return rtb.DHRobot(name="UR3e Model", links=links)
 
 
@@ -121,7 +121,7 @@ class SimulationService:
         Returns NxM array, where N is the number of timesteps, and M is the amount of joints.
         """
         trajectory = rtb.jtraj(q_actual, q_target, steps)
-        return trajectory.q
+        return trajectory.q.tolist()
 
 
 if __name__ == "__main__":
