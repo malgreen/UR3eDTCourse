@@ -80,9 +80,9 @@ class ContinuousErrorService:
                 self.pt_q_target = [
                     round(x, self.ROUND_AMOUNT) for x in new_q_target[0]
                 ]
-                if new_max_speed:
+                if new_max_speed is not None:
                     self.pt_max_speed = new_max_speed
-                if new_max_accel:
+                if new_max_accel is not None:
                     self.pt_max_accel = new_max_accel
 
                 self.send_sim_msg()
@@ -164,9 +164,9 @@ class ContinuousErrorService:
             3. how long to travel at top speed -> distance(deg) / max_speed(deg/s)
         A simulation message is then sent to begin a trajectory simulation.
         """
-        highest_distance = 0.0  # radians/second
+        highest_distance = 0.0 # needs to be degrees because max speed is given as degrees/second
         for i, _ in enumerate(self.pt_q_actual):
-            distance = abs(self.pt_q_target[i] - self.pt_q_actual[i]) * (180 / np.pi)
+            distance = abs(self.pt_q_target[i] - self.pt_q_actual[i]) * (180 / np.pi) # radians to degrees
             if distance > highest_distance:
                 highest_distance = distance
 

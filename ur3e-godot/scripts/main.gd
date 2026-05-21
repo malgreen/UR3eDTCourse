@@ -4,14 +4,14 @@ extends Node3D
 @onready var rabbit_mq_listener: Node = $RabbitMQListener
 
 func _ready() -> void:
-	rabbit_mq_listener.connect("OnMessage", _on_message_received)
+    rabbit_mq_listener.connect("OnMessage", _on_message_received)
 
 
 func _on_message_received(msg: String):
-	var dict: Dictionary = JSON.parse_string(msg)
-	if dict.get("q_actual") != null:
-		ur3e.rotate_joints(dict["q_actual"])
-		
+    var dict: Dictionary = JSON.parse_string(msg)
+    if dict.get("q_actual") != null:
+        ur3e.rotate_joints(dict["q_actual"])
+        
 
 ## this is how the message looks:
 # q_actual = rotations
